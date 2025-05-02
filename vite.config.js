@@ -1,0 +1,12 @@
+import { defineConfig } from 'vite'
+import vue from '@vitejs/plugin-vue'
+
+// https://vitejs.dev/config/
+export default defineConfig({
+  plugins: [vue()],
+  build: {
+    target: 'esnext', // this makes vue happy with top-level awaits,
+    outDir: 'docs' // Github Pages doesn't like dist
+  },
+  base: '' // create relative paths when rendering
+})
