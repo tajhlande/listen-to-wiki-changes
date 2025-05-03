@@ -1,5 +1,5 @@
 [project]
-name = "l2wc-api"
+name = "listen-to-wiki-changes"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"

@@ -193,7 +193,7 @@ wheels = [
 ]
 
 [[package]]
-name = "l2wc-api"
+name = "listen-to-wiki-changes"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
