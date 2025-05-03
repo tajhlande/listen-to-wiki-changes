@@ -7,9 +7,9 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-docs
+web_app/node_modules
+web_app/dist
+web_app/docs
 dist-ssr
 *.local
 
@@ -23,3 +23,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Python ephemera
+*/.venv
+*/__pycache__
