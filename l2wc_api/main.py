@@ -9,19 +9,23 @@ from httpx import get as httpx_get
 
 WIKI_LIST_URL = "https://wikistats.wmcloud.org/wikimedias_csv.php"
 
-LIST_OF_SPECIAL_WIKIS = (
-    "incubator.wikimedia.org",
-    "meta.wikimedia.org",
-    "nostalgia.wikipedia.org",
-    "outreach.wikimedia.org",
-    "test.wikipedia.org",
-    "wikitech.wikimedia.org",
-    "strategy.wikimedia.org",
-    "foundation.wikimedia.org",
-    "usability.wikimedia.org",
-    "thankyou.wikipedia.org",
-    "quality.wikimedia.org",
-)
+# Wikis with names that don't follow conventions
+SPECIAL_WIKIS = {
+    "www.mediawiki.org": ("mediawiki", "MediaWiki"),
+    "commons.wikimedia.org": ("commons", "Commons Wiki"),
+    "species.wikimedia.org": ("species", "WikiSpecies"),
+    "incubator.wikimedia.org": ("incubator", "Wiki Incubator"),
+    "meta.wikimedia.org": ("meta", "Meta Wiki"),
+    "nostalgia.wikipedia.org": ("nostalgia", "Nostalgia Wiki"),
+    "outreach.wikimedia.org": ("outreach", "Outreach Wiki"),
+    "test.wikipedia.org": ("test", "Test Wiki"),
+    "wikitech.wikimedia.org": ("wikitech", "WikiTech"),
+    "strategy.wikimedia.org": ("strategy", "Strategy Wiki"),
+    "foundation.wikimedia.org": ("foundation", "Foundation Wiki"),
+    "usability.wikimedia.org": ("usability", "Usability Wiki"),
+    "thankyou.wikipedia.org": ("thankyou", "Thank You Wiki"),
+    "quality.wikimedia.org": ("quality", "Quality Wiki"),
+}
 
 logger: Logger = Logger(__name__)
 logger.setLevel("DEBUG")
@@ -91,34 +95,31 @@ def load_wikis_list():
 
                 wiki_type = wiki_metadata['type']
                 if wiki_type and not wiki_type.isdigit():
-                    wiki_list.append(wiki_metadata) # the list has everything, including things we removed
+                    # the list will have an entry for every line in the retrieved data, including things we don't index
+                    wiki_list.append(wiki_metadata)
                     wiki_type = wiki_metadata['type']
                     prefix = wiki_metadata['prefix']
-                    wiki_is_indexed = False
                     if wiki_type == 'special':
                         prefix_split = prefix.split('.')
                         special_name = "NOT_SPECIAL"
-                        if prefix in LIST_OF_SPECIAL_WIKIS:
-                            special_name = prefix_split[0]
+                        if prefix in SPECIAL_WIKIS.keys():
+                            special_name = SPECIAL_WIKIS[prefix][0]
                             wiki_metadata['code'] = special_name
-                            wiki_metadata['display_name'] = special_name.capitalize()
+                            wiki_metadata['display_name'] = SPECIAL_WIKIS[prefix][1]
                             wiki_dict[special_name] = wiki_metadata
-                            wiki_is_indexed = True
                         elif prefix.startswith('www.') and 'wikimedia' in prefix and len(prefix_split) == 3 and prefix_split[0].strip():
                             # maybe a language code as a TLD CC
                             special_name = prefix_split[-1] + "_wikimedia"
                             wiki_metadata['code'] = special_name
                             wiki_metadata['display_name'] = special_name.capitalize()
                             wiki_dict[special_name] = wiki_metadata
-                            wiki_is_indexed = True
                         elif prefix.endswith('.org') and 'wikimedia' in prefix and len(prefix_split) == 3 and prefix_split[0].strip():
                             # probably a language code as the host name prefix
                             special_name = prefix_split[0] +  "_wikimedia"
                             wiki_metadata['code'] = special_name
                             wiki_metadata['display_name'] = special_name.capitalize()
                             wiki_dict[special_name] = wiki_metadata
-                            wiki_is_indexed = True
-                        if special_name == "_special":
+                        if special_name == "NOT_SPECIAL":
                             logger.warning(f"Odd special name {special_name} generated for wiki {wiki_metadata}")
 
                         # we will skip any special wiki that doesn't match any of these
@@ -168,7 +169,13 @@ async def get_wikis():
         "wikis": wiki_dict,
     }
 
-@app.get("/api/wikis/{wiki_code}")
+@app.get("/api/wiki_codes")
+async def get_wiki_codes():
+    return {
+        "wiki_codes": {wc: wiki_dict[wc]['display_name'] for wc in wiki_dict.keys()} #wiki_dict.keys(),
+    }
+
+@app.get("/api/wiki/{wiki_code}")
 async def get_wiki(wiki_code: str):
     wiki_metadata = wiki_dict.get(wiki_code)
     if wiki_metadata is None:
