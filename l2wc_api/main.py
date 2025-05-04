@@ -1,4 +1,4 @@
-import itertools
+import html
 import sys
 from contextlib import asynccontextmanager
 from logging import Logger, StreamHandler, Formatter
@@ -72,6 +72,7 @@ def load_wikis_list():
     response = httpx_get(WIKI_LIST_URL)
     wiki_list.clear()
     wiki_types.clear()
+    wiki_types.add("special") # because they are indeed special
     wiki_dict.clear()
     language_dict.clear()
     wiki_list_columns.clear()
@@ -81,67 +82,110 @@ def load_wikis_list():
             # header row
             wiki_list_columns.extend(line.split(','))
         else:
+            # hack to fix HTML encoding in response
+            line = html.unescape(line)
             wiki_count = wiki_count + 1
             try:
                 # logger.debug(f"Processing line({wiki_count}): {line}")
                 wiki_metadata = dict(zip(wiki_list_columns, line.split(',')))
+
                 wiki_type = wiki_metadata['type']
                 if wiki_type and not wiki_type.isdigit():
                     wiki_list.append(wiki_metadata) # the list has everything, including things we removed
                     wiki_type = wiki_metadata['type']
                     prefix = wiki_metadata['prefix']
+                    wiki_is_indexed = False
                     if wiki_type == 'special':
                         prefix_split = prefix.split('.')
                         special_name = "NOT_SPECIAL"
                         if prefix in LIST_OF_SPECIAL_WIKIS:
                             special_name = prefix_split[0]
                             wiki_metadata['code'] = special_name
+                            wiki_metadata['display_name'] = special_name.capitalize()
                             wiki_dict[special_name] = wiki_metadata
+                            wiki_is_indexed = True
                         elif prefix.startswith('www.') and 'wikimedia' in prefix and len(prefix_split) == 3 and prefix_split[0].strip():
-                            # probably a language code as a TLD CC
+                            # maybe a language code as a TLD CC
                             special_name = prefix_split[-1] + "_wikimedia"
                             wiki_metadata['code'] = special_name
+                            wiki_metadata['display_name'] = special_name.capitalize()
                             wiki_dict[special_name] = wiki_metadata
+                            wiki_is_indexed = True
                         elif prefix.endswith('.org') and 'wikimedia' in prefix and len(prefix_split) == 3 and prefix_split[0].strip():
                             # probably a language code as the host name prefix
                             special_name = prefix_split[0] +  "_wikimedia"
                             wiki_metadata['code'] = special_name
+                            wiki_metadata['display_name'] = special_name.capitalize()
                             wiki_dict[special_name] = wiki_metadata
+                            wiki_is_indexed = True
                         if special_name == "_special":
                             logger.warning(f"Odd special name {special_name} generated for wiki {wiki_metadata}")
 
                         # we will skip any special wiki that doesn't match any of these
+                        #logger.warning(f"Not indexing wiki: {wiki_metadata}")
+
 
                     else:
                         # record the language short code for un-special wikis if one is present
                         if prefix:
                             if prefix in language_dict:
-                                logger.debug(f"Language dict entry for prefix {prefix}: {language_dict[prefix]}")
+                                pass
+                                #logger.debug(f"Language dict entry for prefix {prefix}: {language_dict[prefix]}")
                             if prefix in language_dict and language_dict[prefix][0] != wiki_metadata['language']:
                                 logger.warning(f"Duplicate language code found for code {prefix}: "
                                                f"was {language_dict[prefix][0]}, now {wiki_metadata['language']}")
                             else:
                                 language_dict[wiki_metadata['prefix']] = (wiki_metadata['language'], wiki_metadata['loclang'])
 
-
-                    #logger.debug(f"Adding wiki {wiki_type}")
-                    wiki_types.add(wiki_type)
-                    wiki_code = prefix + "_" + wiki_type
-                    wiki_metadata['code'] = wiki_code
-                    wiki_dict[wiki_code] = wiki_metadata
-
-                    logger.debug(f"Added wiki {wiki_code}")
+                        # index the wiki by wiki_code
+                        #logger.debug(f"Adding wiki {wiki_type}")
+                        if wiki_type not in wiki_types:
+                            logger.debug(f"Adding wiki type {wiki_type} to list of wiki types")
+                        wiki_types.add(wiki_type)
+                        wiki_code = prefix + "_" + wiki_type
+                        wiki_metadata['code'] = wiki_code
+                        wiki_metadata['display_name'] = wiki_metadata['language'] + " " + wiki_metadata['type'].capitalize()
+                        wiki_dict[wiki_code] = wiki_metadata
+                        #logger.debug(f"Added wiki {wiki_code}")
             except Exception as e:
                 logger.exception(f"Error processing line({wiki_count}): {line}")
 
 
     # debug logging
     logger.info(f"Finished loading wiki list. Processed {wiki_count} data rows.")
-    logger.debug(f"Wiki types ({len(wiki_types)}): {list(wiki_types)}")
-    logger.debug(f"Sample Language dict ({len(language_dict)}): {dict(itertools.islice(language_dict.items(), 10))}")
-    logger.debug(f"Sample Wiki dict ({len(wiki_dict)}): {dict(itertools.islice(wiki_dict.items(), 10))}")
+    logger.debug(f"Found {len(wiki_types)} wiki types: {list(wiki_types)}")
+    logger.debug(f"Found {len(language_dict)} languages")
+    logger.debug(f"Found {len(wiki_list)} wikis listed")
+    logger.debug(f"Indexed {len(wiki_dict)} wikis")
+    #logger.debug(f"Sample Language dict ({len(language_dict)}): {dict(itertools.islice(language_dict.items(), 10))}")
+    #logger.debug(f"Sample Wiki dict ({len(wiki_dict)}): {dict(itertools.islice(wiki_dict.items(), 10))}")
     #logger.debug(f"Wiki list ({wiki_count}): {wiki_list}")
 
+
+@app.get("/api/wikis/")
+async def get_wikis():
+    return {
+        "wikis": wiki_dict,
+    }
+
+@app.get("/api/wikis/{wiki_code}")
+async def get_wiki(wiki_code: str):
+    wiki_metadata = wiki_dict.get(wiki_code)
+    if wiki_metadata is None:
+        raise HTTPException(status_code=404, detail="Wiki not found")
+    return wiki_metadata
+
+@app.get("/api/types")
+async def get_wiki_types():
+    return {
+        "types": wiki_types,
+    }
+
+@app.get("/api/languages")
+async def get_wiki_languages():
+    return {
+        "languages": language_dict,
+    }
 
 @app.get("/api/events/")
 async def read_events(wiki_names_str: Optional[str] = Query(None, alias="names"),
