@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [vue()],
   build: {
     target: 'esnext', // this makes vue happy with top-level awaits,
-    outDir: 'docs' // Github Pages doesn't like dist
+    outDir: 'dist' // Github Pages doesn't like dist but we're not using GHP anymore!
   },
-  base: '' // create relative paths when rendering
+  base: '/app' // create relative paths when rendering
 })

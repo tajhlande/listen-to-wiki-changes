@@ -8,7 +8,8 @@ from logging import Logger, StreamHandler, Formatter
 from typing import AsyncGenerator, Optional, Set
 
 from fastapi import FastAPI, Query, HTTPException
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
 from httpx import AsyncClient, get as httpx_get
 from httpx_sse import aconnect_sse
 
@@ -94,16 +95,21 @@ async def fastapi_lifespan(fastapi_app: FastAPI):
 
 app = FastAPI(title="listen-to-wiki-changes", lifespan=fastapi_lifespan)
 
+app.mount("/app", StaticFiles(directory="web_app/dist", html=True), name="static")
 
 @app.get("/")
 async def read_root():
-    """
-    Placeholder method. this should eventually return the index of the Vue app.
-    :return:
-    """
-    global wiki_dict
-    assert len(wiki_dict.keys()) > 0, "Wiki dictionary is empty"
-    return {"Hello": "World"}
+    return RedirectResponse("/app")
+
+# @app.get("/")
+# async def read_root():
+#     """
+#     Placeholder method. this should eventually return the index of the Vue app.
+#     :return:
+#     """
+#     global wiki_dict
+#     assert len(wiki_dict.keys()) > 0, "Wiki dictionary is empty"
+#     return {"Hello": "World"}
 
 
 def load_wikis_list():
