@@ -5,9 +5,10 @@ import sys
 
 from contextlib import asynccontextmanager
 from logging import Logger, StreamHandler, Formatter
-from typing import AsyncGenerator, Optional, Set
+from typing import Any, AsyncGenerator, Optional, Set
 
 from fastapi import FastAPI, Query, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from httpx import AsyncClient, get as httpx_get
@@ -50,10 +51,10 @@ logger.addHandler(stream_handler)
 logger.info('API is starting up')
 
 wiki_list_columns: list[str] = [] # the column names from the wikistats wiki list file, in order.
-wiki_types: set[str] = set() # a set of all the wiki types
+wiki_types: dict[ str, dict[str, str]] = {} # a list of all the wiki types
 wiki_list: list[dict] = [] # all the wiki metadata dicts
 wiki_dict: dict[str, dict] = {} # lang code -> wiki metadata dict
-language_dict: dict[str, tuple[str, str]] = {} # lang code -> (English language name, local language name)
+language_dict: dict[str, dict[str, Any]] = {} # lang code -> { lang_code: language code, en_name: English language name, local_name: local language name}
 wiki_host_index: dict[str, str] = {} # server name -> wiki code
 
 event_relay_loop_task = None
@@ -97,6 +98,16 @@ app = FastAPI(title="listen-to-wiki-changes", lifespan=fastapi_lifespan)
 
 app.mount("/app", StaticFiles(directory="web_app/dist", html=True), name="static")
 
+allowed_origins = ["*"]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=allowed_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 @app.get("/")
 async def read_root():
     return RedirectResponse("/app")
@@ -120,7 +131,7 @@ def load_wikis_list():
     response = httpx_get(WIKI_LIST_URL)
     wiki_list.clear()
     wiki_types.clear()
-    wiki_types.add("special") # because they are indeed special
+    wiki_types['special'] = { 'wikiType': 'special' } # because they are indeed special
     wiki_dict.clear()
     wiki_host_index.clear()
     language_dict.clear()
@@ -139,7 +150,7 @@ def load_wikis_list():
                 wiki_metadata = dict(zip(wiki_list_columns, line.split(',')))
                 wiki_metadata['lang_code'] = 'multi' # until proven otherwise
 
-                wiki_type = wiki_metadata['type']
+                wiki_type = wiki_metadata['type'] if 'type' in wiki_metadata.keys() else None
                 if wiki_type and not wiki_type.isdigit():
                     # the list will have an entry for every line in the retrieved data, including things we don't index
                     wiki_list.append(wiki_metadata)
@@ -169,7 +180,7 @@ def load_wikis_list():
                             wiki_dict[special_name] = wiki_metadata
                             wiki_host_index[prefix] = special_name
                         if special_name == "NOT_SPECIAL":
-                            logger.warning(f"Odd special name {special_name} generated for wiki {wiki_metadata}")
+                            logger.warning(f"Unable to determine wiki name for special wiki: {wiki_metadata}")
 
                         # we will skip any special wiki that doesn't match any of these
                         #logger.warning(f"Not indexing wiki: {wiki_metadata}")
@@ -180,25 +191,32 @@ def load_wikis_list():
                         if prefix:
                             if prefix in language_dict:
                                 pass
-                                #logger.debug(f"Language dict entry for prefix {prefix}: {language_dict[prefix]}")
-                            if prefix in language_dict and language_dict[prefix][0] != wiki_metadata['language']:
+                            if prefix in language_dict and language_dict[prefix]['enName'] != wiki_metadata['language']:
                                 logger.warning(f"Duplicate language code found for code {prefix}: "
-                                               f"was {language_dict[prefix][0]}, now {wiki_metadata['language']}")
+                                               f"recorded '{language_dict[prefix]['enName']}', skipping '{wiki_metadata['language']}'")
                             else:
-                                language_dict[wiki_metadata['prefix']] = (wiki_metadata['language'], wiki_metadata['loclang'])
-                            wiki_metadata['lang_code'] = wiki_metadata['prefix']
+                                language_dict[prefix] = {
+                                    'langCode': prefix,
+                                    'enName': wiki_metadata['language'],
+                                    'localName': wiki_metadata['loclang']
+                                }
+                                # logger.debug(f"Creating language dict entry for prefix {prefix}: {language_dict[prefix]}")
+                            wiki_metadata['langCode'] = wiki_metadata['prefix']
 
                         # index the wiki by wiki_code
                         #logger.debug(f"Adding wiki {wiki_type}")
                         if wiki_type not in wiki_types:
                             logger.debug(f"Adding wiki type {wiki_type} to list of wiki types")
-                        wiki_types.add(wiki_type)
+                        wiki_types[wiki_type] = { 'wikiType': wiki_type }
                         wiki_code = prefix + "_" + wiki_type
                         wiki_metadata['code'] = wiki_code
                         wiki_metadata['display_name'] = wiki_metadata['language'] + " " + wiki_metadata['type'].capitalize()
                         wiki_dict[wiki_code] = wiki_metadata
                         wiki_host_index[prefix + "." + wiki_type + ".org"] = wiki_code # a terrible hack but ...
                         #logger.debug(f"Added wiki {wiki_code}")
+                else:
+                    logger.warning(f"Skipping wiki with missing or invalid type: {wiki_metadata}")
+
             except Exception:
                 logger.exception(f"Error processing line({wiki_count}): {line}")
 
@@ -229,11 +247,11 @@ async def get_wikis():
 async def get_wiki_codes():
     """
     Get a list of all the wiki codes
-    :return: a JSON object containing a key for each wiki code that maps to a display name for that wiki code
+    :return: a JSON array containing dicts that contain wiki code and display name for each wiki
     """
-    return {
-        "wiki_codes": {wc: wiki_dict[wc]['display_name'] for wc in wiki_dict.keys()} #wiki_dict.keys(),
-    }
+    return  [{ 'wikiCode': wc, 'displayName': wiki_dict[wc]['display_name'] } for wc in wiki_dict.keys()]
+    #     "wiki_codes": {wc: { 'wiki_code': wc, 'display_name': wiki_dict[wc]['display_name'] } for wc in wiki_dict.keys()} #wiki_dict.keys(),
+    # }
 
 
 @app.get("/api/wiki/{wiki_code}")
@@ -253,29 +271,24 @@ async def get_wiki(wiki_code: str):
 async def get_wiki_types():
     """
     Get a list of all the wiki types
-    :return: a JSON object containing a list of wiki types, e.g. ["wikipedia", "wiktionary", "special"]
+    :return: a JSON array containing a list of wiki type dicts
     """
-    return {
-        "types": wiki_types,
-    }
+    return [ wiki_types[wt] for wt in wiki_types.keys() ]
 
 
 @app.get("/api/languages")
 async def get_wiki_languages():
     """
-    Get a list of all the languages, indexed by language code
-    :return: a JSON object containing a key for each language code that maps to a tuple of English language name and
-             local language name
+    Get a list of all the languages
+    :return: a JSON array containing dicts of language code, English language name and local language name
     """
-    return {
-        "languages": language_dict,
-    }
+    return [ language_dict[lc] for lc in language_dict.keys()]
 
 
 class EvictingQueue(asyncio.Queue):
     """
     Custom queue (ring buffer, really) that evicts the oldest message when full.
-    Relies on the implementation of Set to use the global interpreter lock to be thread-safe.
+    Relies on the implementation of Dict to use the global interpreter lock to be thread-safe.
     see https://wiki.python.org/moin/GlobalInterpreterLock for when this might or might not be true.
     """
     def __init__(self, maxsize=EVENT_QUEUE_SIZE):
@@ -319,11 +332,15 @@ def refine_event(raw_event):
         raise
 
     if raw_event['meta']['domain'] in wiki_host_index.keys():
-        wiki_code = wiki_host_index[raw_event['meta']['domain']]
-        wiki = wiki_dict[wiki_code]
-        refined_event['code'] = wiki_code
-        refined_event['type'] = wiki['type']
-        refined_event['language'] = wiki['lang_code']
+        try:
+            wiki_code = wiki_host_index[raw_event['meta']['domain']]
+            wiki = wiki_dict[wiki_code]
+            refined_event['code'] = wiki_code
+            refined_event['type'] = wiki['type']
+            # logger.debug(f"Wiki for event: {wiki}")
+            refined_event['language'] = wiki['language']
+        except Exception:
+            logger.exception(f"Error enriching refined event: {raw_event}")
 
     return refined_event
 
@@ -353,37 +370,40 @@ async def event_relay_loop():
     """
     logger.info("Starting SSE event relay loop...")
     global active_subscribers
-    try:
-        async with AsyncClient(timeout=None) as streaming_client:
-            async with aconnect_sse(streaming_client, "GET", WIKI_EVENT_STREAM_URL) as event_source:
-                async for sse_event in event_source.aiter_sse():
-                    # look for only namespace 0 for now
-                    try:
-                        raw_event = json.loads(sse_event.data)
-                        if raw_event['namespace'] != 0: # only main page namespace stuff
-                            continue
-                        if raw_event['type'] != 'edit': # only edits for now
-                            continue
-                    except:
-                        continue # if for some reason the event doesn't have parseable json data or a namespace, skip it.
-                    #logger.debug(f"Raw event['namespace']: '{raw_event['namespace']}'. type: '{type(raw_event['namespace'])}''")
-
-                    # logger.debug(f"Received raw event: {raw_event}")
-
-                    refined_event = refine_event(raw_event)
-
-                    for queue in list(active_subscribers):
+    while True:
+        # repeating because the server closes the connection with an incomplete message after a while
+        try:
+            async with AsyncClient(timeout=None) as streaming_client:
+                async with aconnect_sse(streaming_client, "GET", WIKI_EVENT_STREAM_URL) as event_source:
+                    async for sse_event in event_source.aiter_sse():
+                        # look for only namespace 0 for now
                         try:
-                            queue.put_nowait(refined_event)
-                        except Exception:
-                            pass
+                            raw_event = json.loads(sse_event.data)
+                            if raw_event['namespace'] != 0: # only main page namespace stuff
+                                continue
+                            if raw_event['type'] != 'edit': # only edits for now
+                                continue
+                        except:
+                            continue # if for some reason the event doesn't have parseable json data or a namespace, skip it.
+                        #logger.debug(f"Raw event['namespace']: '{raw_event['namespace']}'. type: '{type(raw_event['namespace'])}''")
 
-    except asyncio.CancelledError:
-        logger.info("Relay loop received and handled cancel signal.")
-        raise
-    except Exception as e:
-        logger.exception(f"Relay loop crashed: {e}")
-        # TODO Should we restart relay loop task?  depends on what the exception is.
+                        # logger.debug(f"Received raw event: {raw_event}")
+
+                        refined_event = refine_event(raw_event)
+
+                        for queue in list(active_subscribers):
+                            try:
+                                queue.put_nowait(refined_event)
+                            except Exception:
+                                pass
+
+        except asyncio.CancelledError:
+            logger.info("Relay loop received and handled cancel signal.")
+            raise
+        except Exception as e:
+            logger.exception(f"Relay loop crashed: {e}")
+
+
 
 
 async def filtered_event_generator(codes: list[str], types: list[str], langs: list[str]) -> AsyncGenerator[str, None]:
@@ -402,10 +422,12 @@ async def filtered_event_generator(codes: list[str], types: list[str], langs: li
                 # Wait for a new event with timeout
                 refined_event = await asyncio.wait_for(queue.get(), timeout=15.0)
                 if await filter_pass(refined_event, codes, types, langs):
-                    yield f"event: wiki_event\ndata: {refined_event}\n\n"
+                    yield f"event: wiki_event\ndata: {json.dumps(refined_event)}\n\n"
+                    await asyncio.sleep(0)
             except asyncio.TimeoutError:
                 # No events for a while, send keep-alive
                 yield ": keep-alive\n\n"
+                await asyncio.sleep(0)
     finally:
         active_subscribers.remove(queue)
         logger.info(f"Client disconnected. Remaining: {len(active_subscribers)}")

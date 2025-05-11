@@ -1,55 +1,80 @@
 import { ref, shallowReactive, toRaw, watch } from "vue";
 
 const domParser = new DOMParser();
-const wikis = await fetch("https://wikistats.wmcloud.org/wikimedias_csv.php")
-  .then((res) => res.text())
-  .then((res) =>
-    // Ref makes entire array reactive
-    ref(
-      res
-        .split("\n")
-        .map((row) => row.split(","))
-        .filter((row) => row[2] !== "special")
-        .map((row) => {
-          const loc_lang = domParser.parseFromString(row[4], "text/html")
-            .documentElement.textContent;
-          return {
-            lang: row[3],
-            type: row[2],
-            loc_lang,
-            title: `${loc_lang} ${row[2]}`,
-            link: `${row[1]}.${row[2]}.org`,
-            checked: false,
-          };
-        })
-        .slice(1, -1)
-    )
-  );
+//const baseUrl = location.origin; //+ import.meta.env.BASE_URL;
+console.log("Location.origin: " + location.origin);
+console.log("Import.meta.env.BASE_URL: " + import.meta.env.BASE_URL);
 
-console.log(wikis);
+// TODO remove this hack after debug
+const baseUrl = "http://localhost:8000";
+console.log('Base app URL: ' + baseUrl);
 
-export const useWikis = () => wikis;
+/*
+Examples of each:
+Wiki Code objects
+{"wiki_code":"commons","display_name":"Commons Wiki"}
+{"wiki_code":"de_wikipedia","display_name":"German Wikipedia"}
 
-const filter = shallowReactive(new Set());
+Wiki Language objects
+{"lang_code":"en","en_name":"English","local_name":"English"}
+{"lang_code":"zh","en_name":"Chinese","local_name":"中文"}
+
+Wiki type objects
+{"wiki_type":"special"}
+{"wiki_type":"wikipedia"}
+ */
+const wikiCodes = await fetch(baseUrl + "/api/wiki_codes")
+    .then((res) => res.json());
+const wikiLangs = await fetch(baseUrl + "/api/languages")
+    .then((res) => res.json());
+const wikiTypes = await fetch(baseUrl + "/api/types")
+    .then((res) => res.json());
+
+
+console.log("First 10 wiki codes (" + wikiCodes.length + " total): " + JSON.stringify(wikiCodes.slice(0, 10)));
+console.log("First 10 wiki langs (" + wikiLangs.length + " total): " + JSON.stringify(wikiLangs.slice(0, 10)));
+console.log("First 10 wiki types (" + wikiTypes.length + " total): " + JSON.stringify(wikiTypes.slice(0, 10)));
+// console.dir(wikiCodes)
+// console.dir(wikiLangs)
+// console.dir(wikiTypes)
+// console.log("First wiki code object: " + JSON.stringify(wikiCodes[0]))
+
+export const getWikiCodes = () => wikiCodes;
+export const getWikiLangs = () => wikiLangs;
+export const getWikiTypes = () => wikiTypes;
+
+const wikiCodeFilter = shallowReactive(new Set());
+const wikiLangFilter = shallowReactive(new Set());
+const wikiTypeFilter = shallowReactive(new Set());
 const recentChange = ref();
-const worker = new SharedWorker(new URL("./sharedworker.js", import.meta.url));
+const worker = new SharedWorker(new URL("./relay_client_shared_worker.js", import.meta.url));
 
 worker.port.onmessage = (e) => {
   recentChange.value = e;
 };
 
-watch(filter, () => {
-  worker.port.postMessage(toRaw(filter));
+watch([wikiCodeFilter, wikiLangFilter, wikiTypeFilter], () => {
+  worker.port.postMessage({
+    apiUrl: baseUrl + "/api/events",
+    wikiCodes: Array.from(toRaw(wikiCodeFilter)),
+    wikiLangs: Array.from(toRaw(wikiLangFilter)),
+    wikiTypes: Array.from(toRaw(wikiTypeFilter)),
+  })
+  // worker.port.postMessage(toRaw(filter));
 });
 
 /**
  * @typedef {UseRecentChangeReturn} UseRecentChangeReturn
- * @property {ShallowReactive<Set<String>>} filter - The server name filter used for recent changes
+ * @property {ShallowReactive<Set<String>>} wikiCodeFilter - The wiki code filter used for recent changes
+ * @property {ShallowReactive<Set<String>>} wikiTypeFilter - The wiki type filter used for recent changes
+ * @property {ShallowReactive<Set<String>>} wikiLangFilter - The wiki lang filter used for recent changes
  * @property {Ref<MessageEvent<any>>} recentChange - The most recent change event
  *
  * @returns {UseRecentChangeReturn} UseRecentChangeReturn
  */
 export const useRecentChange = () => ({
-  filter,
+  wikiCodeFilter,
+  wikiTypeFilter,
+  wikiLangFilter,
   recentChange,
 });
