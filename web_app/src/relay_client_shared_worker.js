@@ -60,7 +60,7 @@ onconnect = (e) => {
                 // console.log("Event received")
                 try {
                     const data = JSON.parse(event.data);
-                    console.log('Received event from server: ' + JSON.stringify(data))
+                    // console.log('Received event from server: ' + JSON.stringify(data))
                     port.postMessage(data);
                 } catch (err) {
                     console.error(err)

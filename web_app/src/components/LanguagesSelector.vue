@@ -126,7 +126,6 @@ wikiTypes.forEach((wikiType) => {
 //   }
 //   return searchData.value;
 // });
-console.log("Current tab: " + JSON.stringify(currentTab))
 </script>
 
 <template>

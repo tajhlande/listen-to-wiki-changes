@@ -7,7 +7,7 @@ export let swells = []
 export function calculateSize(data) {
     try {
         const scale_factor = 5
-        let orig_size = data.length.new - data.length.old
+        let orig_size = data.change_in_length; // data.length.new - data.length.old
         const abs_size = Math.abs(orig_size);
         let scaled_size = Math.max(Math.sqrt(abs_size) * scale_factor, 3);
         return [orig_size, scaled_size];

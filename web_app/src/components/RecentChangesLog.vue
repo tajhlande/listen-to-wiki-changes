@@ -14,6 +14,7 @@ watch(recentChange, () => {
   recentChanges.value.push(recentChange.value.data);
 });
 
+// decodeURI(change.meta.uri)
 </script>
 
 <template>
@@ -21,7 +22,9 @@ watch(recentChange, () => {
     <div id="log">
       <TransitionGroup name="list" tag="ul">
         <li v-for="change in recentChanges" :key="change.id ?? change.log_id">
-          {{ `${change.user} changed ${decodeURI(change.meta.uri)}` }}
+          {{ `${change.user}` }} edited
+          <a target="_blank" :href="change.title_url" :title="change.title">{{change.title}}</a>
+          on {{change.domain}}
         </li>
       </TransitionGroup>
     </div>

@@ -21,7 +21,9 @@ const body_background_color = "#f8f8f8",
   newuser_box_color = "rgb(41, 128, 185)",
   bot_color = "rgb(155, 89, 182)",
   anon_color = "rgb(46, 204, 113)",
-  edit_color = "#fff",
+  edit_color = "rgb(38, 134, 207)", // rgb(0, 144, 255)
+  revert_color = "rgb(222, 147, 50)", // "rgb(255, 144, 0)",
+  circle_middle_color = "rgba(255, 255, 255, 0.5)",
   sound_totals = 51,
   total_edits = 0;
 
@@ -39,6 +41,7 @@ onMounted(() => {
   // TODO: Change color based on change type
   watch(recentChange, () => {
     const data = recentChange.value.data;
+    const isAddingContent = data.change_in_length > 0;
     console.log(data);
 
     // calculate the 'magnitude' of both the audio and visuals
@@ -65,7 +68,7 @@ onMounted(() => {
     const circle_group = svg
       .append("g")
       .attr("transform", "translate(" + x + ", " + y + ")")
-      .attr("fill", edit_color)
+      .attr("fill", circle_middle_color)
       .style("opacity", starting_opacity);
 
     const ring = circle_group
@@ -81,7 +84,7 @@ onMounted(() => {
 
     const circle_container = circle_group
       .append("a")
-      .attr("xlink:href", data.url)
+      .attr("xlink:href", data.title_url)
       .attr("target", "_blank")
       .attr("fill", svg_text_color);
 
@@ -92,7 +95,9 @@ onMounted(() => {
       .attr("r", scaledSize)
       .transition()
       .duration(max_life)
+        .attr("fill", isAddingContent ? edit_color : revert_color)
       .style("opacity", 0)
+        .attr("opacity", 0)
       .on("end", function () {
         circle_group.remove();
       })
@@ -106,6 +111,7 @@ onMounted(() => {
   });
 });
 </script>
+
 <template>
   <div id="area"></div>
 </template>
