@@ -105,46 +105,82 @@ wikiTypes.forEach((wikiType) => {
 //   });
 // });
 
-// const searchInput = ref("");
+const searchInput = ref("");
 
-// const searchData = computed(() => {
-//   if (currentTab.value === "bylang") {
-//     return wikiLangs.value;
-//   }
-//   if (currentTab.value === "bytype") {
-//     return wikisByType.value;
-//   }
-//   return wikis.value;
-// });
+const codesSearchData = computed(() => {
+  return wikiCodes;
+});
 
-// const searchResults = computed(() => {
-//   if (searchInput.value) {
-//     const search = searchInput.value.toLowerCase();
-//     return searchData.value.filter((wiki) =>
-//       `${wiki.lang} ${wiki.title} ${wiki.link}`.toLowerCase().includes(search)
-//     );
-//   }
-//   return searchData.value;
-// });
+const codesSearchResults = computed(() => {
+  if (searchInput.value) {
+    console.log("Computing code search results for input '" + searchInput.value + "'")
+    const search = searchInput.value.toLowerCase();
+    let result = codesSearchData.value.filter((wikiCode) =>
+      `${wikiCode.wikiCode} ${wikiCode.displayName}`.toLowerCase().includes(search)
+    );
+    console.log("Results size: " + result.length)
+    return result
+  }
+  console.log("Returning full codes search dataset")
+  return codesSearchData.value;
+});
+
+
+const langsSearchData = computed(() => {
+  return wikiLangs;
+});
+
+const langsSearchResults = computed(() => {
+  if (searchInput.value) {
+    console.log("Computing lang search results for input '" + searchInput.value + "'")
+    const search = searchInput.value.toLowerCase();
+    let result = langsSearchData.value.filter((wikiLang) =>
+        `${wikiLang.langCode} ${wikiLang.enName} ${wikiLang.localName}`.toLowerCase().includes(search)
+    );
+    console.log("Results size: " + result.length)
+    return result
+  }
+  console.log("Returning full lang search dataset")
+  return langsSearchData.value;
+});
+
+
+const typesSearchData = computed(() => {
+  return wikiTypes;
+});
+
+const typesSearchResults = computed(() => {
+  if (searchInput.value) {
+    console.log("Computing type search results for input '" + searchInput.value + "'")
+    const search = searchInput.value.toLowerCase();
+    let result = typesSearchData.value.filter((wikiType) =>
+        `${wikiType.wikiType}`.toLowerCase().includes(search)
+    );
+    console.log("Results size: " + result.length)
+    return result
+  }
+  console.log("Returning full lang search dataset")
+  return typesSearchData.value;
+});
 </script>
 
 <template>
   <div id="selector-container">
-    <!-- <cdx-search-input v-model="searchInput" aria-label="Search" placeholder="English" /> -->
+    <cdx-search-input v-model="searchInput" aria-label="Search Wiki Codes" placeholder="e.g. English" />
     <cdx-tabs v-model:active="currentTab" :framed="true">
       <cdx-tab v-for="(tab, index) in tabsData" :key="index" :name="tab.name" :label="tab.label">
         <div v-if="currentTab === 'all'" id="wiki-codes-grid">
-          <cdx-checkbox v-for="wikiCode in wikiCodes" v-model="wikiCode.checked" :key="wikiCode.wikiCode" v-memo="[wikiCode.checked]">
+          <cdx-checkbox v-for="wikiCode in codesSearchResults" v-model="wikiCode.checked" :key="wikiCode.wikiCode">
             <span v-html="wikiCode.displayName"></span>
           </cdx-checkbox>
         </div>
         <div v-if="currentTab === 'bylang'" id="wiki-langs-grid">
-          <cdx-checkbox v-for="lang in wikiLangs" v-model="lang.checked" :key="lang.langCode" v-memo="[lang.checked]">
+          <cdx-checkbox v-for="lang in langsSearchResults" v-model="lang.checked" :key="lang.langCode">
             <span v-html="lang.enName + ' (' + lang.localName + ')'"></span>
           </cdx-checkbox>
         </div>
         <div v-if="currentTab === 'bytype'" id="wiki-types-grid">
-          <cdx-checkbox v-for="wikiType in wikiTypes" v-model="wikiType.checked" :key="wikiType.wikiType" v-memo="[wikiType.checked]">
+          <cdx-checkbox v-for="wikiType in typesSearchResults" v-model="wikiType.checked" :key="wikiType.wikiType">
             <span v-html="wikiType.wikiType"></span>
           </cdx-checkbox>
         </div>

@@ -1,4 +1,4 @@
-import { ref, shallowReactive, toRaw, watch } from "vue";
+import {reactive, ref, shallowReactive, toRaw, watch} from "vue";
 
 const domParser = new DOMParser();
 //const baseUrl = location.origin; //+ import.meta.env.BASE_URL;
@@ -39,9 +39,9 @@ console.log("First 10 wiki types (" + wikiTypes.length + " total): " + JSON.stri
 // console.dir(wikiTypes)
 // console.log("First wiki code object: " + JSON.stringify(wikiCodes[0]))
 
-export const getWikiCodes = () => wikiCodes;
-export const getWikiLangs = () => wikiLangs;
-export const getWikiTypes = () => wikiTypes;
+export const getWikiCodes = () => wikiCodes.map((item) => reactive(item));
+export const getWikiLangs = () => wikiLangs.map((item) => reactive(item));
+export const getWikiTypes = () => wikiTypes.map((item) => reactive(item));
 
 const wikiCodeFilter = shallowReactive(new Set());
 const wikiLangFilter = shallowReactive(new Set());
