@@ -2,7 +2,7 @@
 import { onMounted, watch } from "vue";
 import * as d3 from "d3";
 import { useRecentChange } from "../composition.js";
-import { loadSounds, calculateSize, playSound } from "../audio.js";
+import {loadSounds, calculateSize, playSound, playRandomSwell} from "../audio.js";
 
 loadSounds();
 
@@ -21,8 +21,10 @@ const body_background_color = "#f8f8f8",
   newuser_box_color = "rgb(41, 128, 185)",
   bot_color = "rgb(155, 89, 182)",
   anon_color = "rgb(46, 204, 113)",
-  edit_color = "rgb(38, 134, 207)", // rgb(0, 144, 255)
-  revert_color = "rgb(222, 147, 50)", // "rgb(255, 144, 0)",
+  grow_color = "#2686cf", //"rgb(38, 134, 207)", // rgb(0, 144, 255)
+  shrink_color = "#de9332" ,  //"rgb(222, 147, 50)", // "rgb(255, 144, 0)",
+  new_user_color = "rgb(205, 40, 214)",
+  new_page_color = "rgb(145, 212, 29)",
   circle_middle_color = "rgba(255, 255, 255, 0.5)",
   sound_totals = 51,
   total_edits = 0;
@@ -42,28 +44,39 @@ onMounted(() => {
   watch(recentChange, () => {
     const data = recentChange.value.data;
     const isAddingContent = data.change_in_length > 0;
-    console.log(data);
+
+    console.log(data)
+    // console.log('delta length: ' + data.change_in_length + ', is adding content: ' + isAddingContent);
 
     // calculate the 'magnitude' of both the audio and visuals
     const [origSize, scaledSize] = calculateSize(recentChange.value.data);
 
-    // play audio
-    if (origSize > 0) {
-      playSound(scaledSize, 'add')
+    if (data.event_type === 'new_user') {
+      playRandomSwell();
     } else {
-      playSound(scaledSize, 'sub')
+      // play audio
+      if (origSize > 0) {
+        playSound(scaledSize, 'add')
+      } else {
+        playSound(scaledSize, 'sub')
+      }
     }
+
 
     // draw circle
     let label_text = data.title;
     let no_label = true;
-    let type = data.type;
+    let type = data.event_type;
     let starting_opacity = silent ? 0.2 : 1;
 
     const circle_id = "d" + ((Math.random() * 100000) | 0);
 
     const x = Math.random() * (width - scaledSize) + scaledSize;
     const y = Math.random() * (height - scaledSize) + scaledSize;
+
+    let circle_color = isAddingContent ? grow_color : shrink_color;
+    if (data.event_type === 'new_user') circle_color = new_user_color;
+    if (data.event_type === 'new_page') circle_color = new_page_color
 
     const circle_group = svg
       .append("g")
@@ -95,7 +108,7 @@ onMounted(() => {
       .attr("r", scaledSize)
       .transition()
       .duration(max_life)
-        .attr("fill", isAddingContent ? edit_color : revert_color)
+      .attr("fill", circle_color)
       .style("opacity", 0)
         .attr("opacity", 0)
       .on("end", function () {
@@ -129,10 +142,10 @@ onMounted(() => {
 
 .edit {
   transition: fill 1s;
-  fill: var(--background-color-progressive);
+  /* fill: var(--background-color-progressive); */
 }
 
 .edit:hover {
-  fill: var(--background-color-progressive--hover);
+  /*fill: var(--background-color-progressive--hover);*/
 }
 </style>

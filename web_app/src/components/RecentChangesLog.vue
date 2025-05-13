@@ -5,6 +5,8 @@ import { useRecentChange } from "../composition.js";
 const { recentChange } = useRecentChange();
 const listenCounter = ref(0);
 const recentChanges = ref([]);
+const botEmoji = '&#129302;';
+
 
 watch(recentChange, () => {
   listenCounter.value++;
@@ -22,15 +24,29 @@ watch(recentChange, () => {
     <div id="log">
       <TransitionGroup name="list" tag="ul">
         <li v-for="change in recentChanges" :key="change.id ?? change.log_id">
-          {{ `${change.user}` }} edited
-          <a target="_blank" :href="change.title_url" :title="change.title">{{change.title}}</a>
-          on {{change.domain}}
+          <span v-if="change.event_type === 'edit'">
+            {{ change.bot ? botEmoji : '' }}
+            {{ `${change.user}` }} edited
+            <a target="_blank" :href="change.title_url" :title="change.title">{{change.title}}</a>
+            on {{change.domain}}
+          </span>
+          <span v-if="change.event_type === 'new_page'" style="font-weight: bold">
+            {{ change.bot ? '&#129302;' : '' }}
+            {{ `${change.user}` }} created page
+            <a target="_blank" :href="change.title_url" :title="change.title">{{change.title}}</a>
+            on {{change.domain}}
+          </span>
+          <span v-if="change.event_type === 'new_user'" style="font-weight: bolder">
+            Welcome
+            <a target="_blank" :href="change.title_url" :title="change.title">{{ `${change.user}` }}</a>
+            to {{change.domain}}!
+          </span>
         </li>
       </TransitionGroup>
     </div>
     <div style="margin-bottom: 1rem; text-align: center">
       You have listened to a total of
-      <span id="edit-counter"> {{ listenCounter }} edits</span>.
+      <span id="edit-counter"> {{ listenCounter }} changes</span>.
     </div>
   </div>
 </template>

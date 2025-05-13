@@ -6,6 +6,7 @@ import sys
 from contextlib import asynccontextmanager
 from logging import Logger, StreamHandler, Formatter
 from typing import Any, AsyncGenerator, Optional, Set
+from uuid import uuid4
 
 from fastapi import FastAPI, Query, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -73,7 +74,7 @@ async def fastapi_lifespan(fastapi_app: FastAPI):
 
     logger.debug("Starting SSE event relay loop task...")
     global event_relay_loop_task
-    event_relay_loop_task = asyncio.create_task(event_relay_loop())
+    event_relay_loop_task = asyncio.create_task(edit_event_relay_loop())
 
     #let the application run
     logger.info("Startup complete.")
@@ -306,6 +307,15 @@ class EvictingQueue(asyncio.Queue):
 # Global subscriber registry
 active_subscribers: Set[EvictingQueue] = set()
 
+def compute_length_change(raw_event):
+    length_obj = raw_event.get('length', 'no_length')
+    if length_obj == 'no_length':
+        return 0
+
+    new_length = length_obj.get('new', 0)
+    old_length = length_obj.get('old', 0)
+    return new_length - old_length
+
 
 def refine_event(raw_event):
     """
@@ -315,9 +325,10 @@ def refine_event(raw_event):
     """
     try:
         refined_event = {
-            "id": raw_event['id'] or "",
+            "id": raw_event.get('id', uuid4()), # not sure if this matters except that Vue wants it to be unique
             "domain": raw_event['meta']['domain'] or "",
-            "type": raw_event['type'] or "",
+            "wiki_type": "", # we don't know yet
+            "event_type": "unknown", # we don't know yet
             "code": "", # we don't know yet
             "language": "", # we don't know yet
             "title": raw_event['title'] or "",
@@ -325,7 +336,7 @@ def refine_event(raw_event):
             "timestamp": raw_event['timestamp'] or "",
             "user": raw_event['user'] or "",
             "bot": raw_event['bot'] or "",
-            "change_in_length": raw_event['length']['new'] - raw_event['length']['old'] or "",
+            "change_in_length": compute_length_change(raw_event),
         }
     except Exception:
         logger.exception(f"Error processing raw event: {raw_event}")
@@ -336,11 +347,19 @@ def refine_event(raw_event):
             wiki_code = wiki_host_index[raw_event['meta']['domain']]
             wiki = wiki_dict[wiki_code]
             refined_event['code'] = wiki_code
-            refined_event['type'] = wiki['type']
+            refined_event['wiki_type'] = wiki['type']
             # logger.debug(f"Wiki for event: {wiki}")
             refined_event['language'] = wiki['language']
         except Exception:
             logger.exception(f"Error enriching refined event: {raw_event}")
+
+    # see if they are "new page" or "new user" events
+    if raw_event['type'] == 'log' and raw_event['log_type'] and raw_event['log_type'] == 'newusers':
+        refined_event['event_type'] = 'new_user'
+    elif raw_event['type'] == 'new':
+        refined_event['event_type'] = 'new_page'
+    elif raw_event['type'] == 'edit':
+        refined_event['event_type'] = 'edit'
 
     return refined_event
 
@@ -356,19 +375,19 @@ async def filter_pass(refined_event, requested_codes, requested_types, requested
     #              f"Language: '{refined_event['language']}', requested languages: {requested_langs}")
     try:
         return (refined_event['code'] in requested_codes or
-            refined_event['type'] in requested_types or
+            refined_event['wiki_type'] in requested_types or
             refined_event['language'] in requested_langs)
     except Exception:
         logger.error(f"Error filtering refined event: {refined_event}")
         raise
 
 
-async def event_relay_loop():
+async def edit_event_relay_loop():
     """
     Background task: connect once to the event stream and queue events to all subscribers
     :return:
     """
-    logger.info("Starting SSE event relay loop...")
+    logger.info("Starting SSE edit event relay loop...")
     global active_subscribers
     while True:
         # repeating because the server closes the connection with an incomplete message after a while
@@ -376,20 +395,22 @@ async def event_relay_loop():
             async with AsyncClient(timeout=None) as streaming_client:
                 async with aconnect_sse(streaming_client, "GET", WIKI_EVENT_STREAM_URL) as event_source:
                     async for sse_event in event_source.aiter_sse():
-                        # look for only namespace 0 for now
                         try:
                             raw_event = json.loads(sse_event.data)
-                            if raw_event['namespace'] != 0: # only main page namespace stuff
-                                continue
-                            if raw_event['type'] != 'edit': # only edits for now
+                            # fast-filter events that aren't edits or new pages in namespace 0, or new users
+                            re_type = raw_event['type']
+                            ns = raw_event['namespace']
+                            if not((re_type == 'edit' and ns is 0) or
+                                   (re_type == 'log' and raw_event['log_type'] == 'newusers') or
+                                   (re_type == 'new' and ns is 0)):
                                 continue
                         except:
-                            continue # if for some reason the event doesn't have parseable json data or a namespace, skip it.
-                        #logger.debug(f"Raw event['namespace']: '{raw_event['namespace']}'. type: '{type(raw_event['namespace'])}''")
-
-                        # logger.debug(f"Received raw event: {raw_event}")
+                            continue # if for some reason the event doesn't have parseable JSON data or a namespace, skip it.
+                        # logger.debug(f"Raw event['namespace']: '{raw_event['namespace']}', type: '{raw_event['type']}', log_type: '{raw_event.get('log_type', '')}'")
 
                         refined_event = refine_event(raw_event)
+                        if refined_event['event_type'] == 'unknown':
+                            continue
 
                         for queue in list(active_subscribers):
                             try:
@@ -416,12 +437,14 @@ async def filtered_event_generator(codes: list[str], types: list[str], langs: li
     global active_subscribers
     active_subscribers.add(queue)
     logger.info(f"New client connected. Total subscribers: {len(active_subscribers)}")
+    language_names = [language_dict[lang_code]['enName'] for lang_code in langs]
     try:
         while True:
+            # map languages
             try:
                 # Wait for a new event with timeout
                 refined_event = await asyncio.wait_for(queue.get(), timeout=15.0)
-                if await filter_pass(refined_event, codes, types, langs):
+                if await filter_pass(refined_event, codes, types, language_names):
                     yield f"event: wiki_event\ndata: {json.dumps(refined_event)}\n\n"
                     await asyncio.sleep(0)
             except asyncio.TimeoutError:
