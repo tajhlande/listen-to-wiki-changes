@@ -16,6 +16,29 @@ watch(recentChange, () => {
   recentChanges.value.push(recentChange.value.data);
 });
 
+function lengthChangeToText(lengthChange) {
+  if (lengthChange === 0) {
+    return '0 bytes changed';
+  }
+  if (lengthChange > 0) {
+    return '' + lengthChange + ' bytes added';
+  }
+  if (lengthChange < 0) {
+    return '' + -lengthChange + ' bytes removed';
+  }
+  return 'unknown change size';
+}
+
+function lengthChangeClass(lengthChange) {
+  if (lengthChange > 0) {
+    return 'grow-change';
+  }
+  if (lengthChange < 0) {
+    return 'shrink-change';
+  }
+  return '';
+}
+
 // decodeURI(change.meta.uri)
 </script>
 
@@ -29,12 +52,14 @@ watch(recentChange, () => {
             {{ `${change.user}` }} edited
             <a target="_blank" :href="change.title_url" :title="change.title">{{change.title}}</a>
             on {{change.domain}}
+            <span :class="lengthChangeClass(change.change_in_length)"> ({{ lengthChangeToText(change.change_in_length)}})</span>
           </span>
           <span v-if="change.event_type === 'new_page'" style="font-weight: bold">
             {{ change.bot ? '&#129302;' : '' }}
             {{ `${change.user}` }} created page
             <a target="_blank" :href="change.title_url" :title="change.title">{{change.title}}</a>
             on {{change.domain}}
+            <span :class="lengthChangeClass(change.change_in_length)"> ({{ lengthChangeToText(change.change_in_length)}})</span>
           </span>
           <span v-if="change.event_type === 'new_user'" style="font-weight: bolder">
             Welcome
@@ -77,5 +102,13 @@ watch(recentChange, () => {
 
 ul {
   list-style: none;
+}
+
+.grow-change {
+  color: #2686cf;
+}
+
+.shrink-change {
+  color: #de9332;
 }
 </style>

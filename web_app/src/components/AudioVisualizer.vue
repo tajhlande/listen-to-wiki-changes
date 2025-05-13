@@ -1,7 +1,7 @@
 <script setup>
 import { onMounted, watch } from "vue";
 import * as d3 from "d3";
-import { useRecentChange } from "../composition.js";
+import {getWikiCodes, useRecentChange} from "../composition.js";
 import {loadSounds, calculateSize, playSound, playRandomSwell} from "../audio.js";
 
 loadSounds();
@@ -31,6 +31,55 @@ const body_background_color = "#f8f8f8",
 
 let silent = false;
 
+const wikiCodeMap  = new Map(getWikiCodes().map(item => [item.wikiCode, item]));
+
+function new_user_action(data, svg_area) {
+  let wikiName = wikiCodeMap.get(data.code).displayName;
+  let messages = ['Welcome ' + data.user + ', ' + wikiName + '\'s newest user!',
+                  wikiName + ' has a new user, ' + data.user + '! Welcome!',
+                  'Welcome, ' + data.user + ' has joined ' + wikiName + '!'];
+  let message = Math.round(Math.random() * (messages.length - 1));
+
+  //var user_link = 'http://' + lid + '.wikipedia.org/w/index.php?title=User_talk:' + data.user + '&action=edit&section=new';
+  let user_group = svg_area.append('g');
+
+  let user_container = user_group.append('a')
+      .attr('xlink:href', data.title_url)
+      .attr('target', '_blank');
+
+  user_group.transition()
+      .delay(7000)
+      .remove();
+
+  user_container.transition()
+      .delay(4000)
+      .style('opacity', 0)
+      .duration(3000);
+
+  user_container.append('rect')
+      .attr('opacity', 0)
+      .transition()
+      .delay(100)
+      .duration(3000)
+      .attr('opacity', 1)
+      .attr('fill', newuser_box_color)
+      .attr('width', width)
+      .attr('height', 35);
+
+  let y = width / 2;
+
+  user_container.append('text')
+      .classed('newuser-label', true)
+      .attr('transform', 'translate(' + y +', 25)')
+      .transition()
+      .delay(1500)
+      .duration(1000)
+      .text(messages[message])
+      .attr('text-anchor', 'middle');
+
+}
+
+
 onMounted(() => {
   let svg = d3
     .select("#area")
@@ -43,9 +92,10 @@ onMounted(() => {
   // TODO: Change color based on change type
   watch(recentChange, () => {
     const data = recentChange.value.data;
+    // console.log(data)
+
     const isAddingContent = data.change_in_length > 0;
 
-    console.log(data)
     // console.log('delta length: ' + data.change_in_length + ', is adding content: ' + isAddingContent);
 
     // calculate the 'magnitude' of both the audio and visuals
@@ -53,6 +103,7 @@ onMounted(() => {
 
     if (data.event_type === 'new_user') {
       playRandomSwell();
+      new_user_action(data, svg)
     } else {
       // play audio
       if (origSize > 0) {

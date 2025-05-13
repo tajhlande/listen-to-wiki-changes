@@ -1,9 +1,6 @@
 # Tasks To-do
 
 ## core functionality and usability
-* fix initial circles to show title that fades with ring 
-* add new user welcome banner across the top, "Welcome XXX to YYYpedia!"
-  * change language in recent changes log to match
 * fix layout issues
   * Get rid of extra padding at the top under the title
   * bound the wiki selector tab contents inside a scrollable pane for the very long list of wikis
