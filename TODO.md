@@ -5,7 +5,6 @@
   * Get rid of extra padding at the top under the title
   * bound the wiki selector tab contents inside a scrollable pane for the very long list of wikis
   * maybe make the wiki list 
-* fix missing shadow styling of article titles
 * check color scheme for color deficiency legibility
 * figure out why phantom subscriptions and duplicate events happen
 
