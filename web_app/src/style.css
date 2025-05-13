@@ -68,3 +68,27 @@ header ul {
     font-size: var(--font-size-x-large);
   }
 }
+
+.article-label {
+  font: 1.0em sans-serif;
+  text-shadow:1px 1px 0 rgb(28, 39, 51),
+  -1px -1px 0 rgb(28, 39, 51),
+  1px -1px 0 rgb(28, 39, 51),
+  -1px 1px 0 rgb(28, 39, 51),
+  0px 1px 0 rgb(28, 39, 51),
+  1px 0px 0 rgb(28, 39, 51),
+  0px -1px 0 rgb(28, 39, 51),
+  -1px 0px 0 rgb(28, 39, 51);
+}
+.newuser-label {
+  font: 1em sans-serif;
+  opacity: 1;
+}
+.about-link {
+  float: right;
+  font-weight: normal;
+  font-style: normal;
+  font-size: 1em;
+  padding-right: 2em;
+  padding-top: 1em;
+}

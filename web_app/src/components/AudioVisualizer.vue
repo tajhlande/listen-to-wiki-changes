@@ -121,6 +121,18 @@ onMounted(() => {
       .text(label_text)
       .classed("article-label", true)
       .attr("text-anchor", "middle");
+
+    circle_container.append('text')
+        .text(label_text)
+        .classed('article-label', true)
+        .attr('text-anchor', 'middle')
+        .style('opacity', 1)
+        .transition()
+        .delay(1000)
+        .style('opacity', 0)
+        .duration(2000)
+        //.each('end', function() { no_label = true; })
+        .remove();
   });
 });
 </script>
