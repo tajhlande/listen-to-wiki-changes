@@ -165,21 +165,21 @@ const typesSearchResults = computed(() => {
 </script>
 
 <template>
-  <div id="selector-container">
+  <div id="selector-container" class="anchor-target">
     <cdx-search-input v-model="searchInput" aria-label="Search Wiki Codes" placeholder="e.g. English" />
-    <cdx-tabs v-model:active="currentTab" :framed="true">
+    <cdx-tabs class="selector-tabs" v-model:active="currentTab" :framed="true">
       <cdx-tab v-for="(tab, index) in tabsData" :key="index" :name="tab.name" :label="tab.label">
-        <div v-if="currentTab === 'all'" id="wiki-codes-grid">
+        <div v-if="currentTab === 'all'" id="wiki-codes-grid" class="selector-grid">
           <cdx-checkbox v-for="wikiCode in codesSearchResults" v-model="wikiCode.checked" :key="wikiCode.wikiCode">
             <span v-html="wikiCode.displayName"></span>
           </cdx-checkbox>
         </div>
-        <div v-if="currentTab === 'bylang'" id="wiki-langs-grid">
+        <div v-if="currentTab === 'bylang'" id="wiki-langs-grid" class="selector-grid">
           <cdx-checkbox v-for="lang in langsSearchResults" v-model="lang.checked" :key="lang.langCode">
             <span v-html="lang.enName + ' (' + lang.localName + ')'"></span>
           </cdx-checkbox>
         </div>
-        <div v-if="currentTab === 'bytype'" id="wiki-types-grid">
+        <div v-if="currentTab === 'bytype'" id="wiki-types-grid" class="selector-grid">
           <cdx-checkbox v-for="wikiType in typesSearchResults" v-model="wikiType.checked" :key="wikiType.wikiType">
             <span v-html="wikiType.wikiType"></span>
           </cdx-checkbox>
@@ -190,6 +190,16 @@ const typesSearchResults = computed(() => {
 </template>
 
 <style scoped>
+
+.selector-grid {
+  margin: 0;
+  padding: 1rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  max-height: 500px;
+  overflow-y: auto;
+}
+
 #language-grid {
   margin: 0 auto;
   margin-top: 1rem;

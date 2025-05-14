@@ -3,6 +3,7 @@ import { CdxProgressBar } from '@wikimedia/codex';
 import LanguagesSelector from './components/LanguagesSelector.vue';
 import RecentChangesLog from './components/RecentChangesLog.vue';
 import AudioVisualizer from './components/AudioVisualizer.vue';
+import About from './components/About.vue'
 </script>
 
 <template>
@@ -15,13 +16,8 @@ import AudioVisualizer from './components/AudioVisualizer.vue';
         <AudioVisualizer></AudioVisualizer>
         <RecentChangesLog></RecentChangesLog>
         <LanguagesSelector></LanguagesSelector>
+        <About></About>
       </div>
     </Suspense>
   </main>
 </template>
-
-<style scoped>
-main {
-  margin-top: 1rem;
-}
-</style>

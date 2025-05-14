@@ -4,7 +4,9 @@
 * fix layout issues
   * Get rid of extra padding at the top under the title
   * bound the wiki selector tab contents inside a scrollable pane for the very long list of wikis
-  * maybe make the wiki list 
+  * add a little padding between wiki list and the top of the tab bar
+  * maybe put the wiki list into multiple columns
+* maybe sort the wiki list and languages 
 * check color scheme for color deficiency legibility
 * figure out why phantom subscriptions and duplicate events happen
 

@@ -15,7 +15,7 @@ onconnect = (e) => {
 
     port.onmessage = (e) => {
         // if there was already an event source connected, disconnect it first
-        if (eventSource && eventSource.readyState === 1) {
+        if (eventSource && eventSource.readyState in [0, 1]) {
             console.info("Closing old event source connection")
             eventSource.close();
         }

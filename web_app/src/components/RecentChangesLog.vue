@@ -1,12 +1,12 @@
 <script setup>
 import { ref, watch } from "vue";
-import { useRecentChange } from "../composition.js";
+import {getWikiCodes, useRecentChange} from "../composition.js";
 
 const { recentChange } = useRecentChange();
 const listenCounter = ref(0);
 const recentChanges = ref([]);
-const botEmoji = '&#129302;';
 
+const wikiCodeMap = new Map(getWikiCodes().map(item => [item.wikiCode, item]));
 
 watch(recentChange, () => {
   listenCounter.value++;
@@ -18,13 +18,13 @@ watch(recentChange, () => {
 
 function lengthChangeToText(lengthChange) {
   if (lengthChange === 0) {
-    return '0 bytes changed';
+    return '+0 bytes';
   }
   if (lengthChange > 0) {
-    return '' + lengthChange + ' bytes added';
+    return '+' + lengthChange + ' bytes';
   }
   if (lengthChange < 0) {
-    return '' + -lengthChange + ' bytes removed';
+    return '-' + -lengthChange + ' bytes';
   }
   return 'unknown change size';
 }
@@ -39,19 +39,21 @@ function lengthChangeClass(lengthChange) {
   return '';
 }
 
+
+
 // decodeURI(change.meta.uri)
 </script>
 
 <template>
-  <div id="recent-changes-log">
+  <div id="recent-changes-log" class="anchor-target">
     <div id="log">
       <TransitionGroup name="list" tag="ul">
         <li v-for="change in recentChanges" :key="change.id ?? change.log_id">
           <span v-if="change.event_type === 'edit'">
-            {{ change.bot ? botEmoji : '' }}
+            {{ change.bot ? '&#129302;' : '' }}
             {{ `${change.user}` }} edited
             <a target="_blank" :href="change.title_url" :title="change.title">{{change.title}}</a>
-            on {{change.domain}}
+            on {{ wikiCodeMap.get(change.code).displayName }}
             <span :class="lengthChangeClass(change.change_in_length)"> ({{ lengthChangeToText(change.change_in_length)}})</span>
           </span>
           <span v-if="change.event_type === 'new_page'" style="font-weight: bold">

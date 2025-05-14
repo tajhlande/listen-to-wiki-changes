@@ -89,7 +89,6 @@ onMounted(() => {
     .classed("svg-content", true)
     .style("background-color", "#1c2733");
 
-  // TODO: Change color based on change type
   watch(recentChange, () => {
     const data = recentChange.value.data;
     // console.log(data)
@@ -118,7 +117,7 @@ onMounted(() => {
     let label_text = data.title;
     let no_label = true;
     let type = data.event_type;
-    let starting_opacity = silent ? 0.2 : 1;
+    let starting_opacity = silent ? 0.2 : 0.8;
 
     const circle_id = "d" + ((Math.random() * 100000) | 0);
 
@@ -189,9 +188,14 @@ onMounted(() => {
 </script>
 
 <template>
-  <div id="area"></div>
+  <div id="area" class="anchor-target"></div>
 </template>
 <style>
+
+#area {
+  padding-top: 48px;
+}
+
 .article-label {
   opacity: 0;
   transition: opacity 1s;
