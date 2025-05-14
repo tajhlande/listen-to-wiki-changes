@@ -8,3 +8,7 @@ dependencies = [
     "fastapi[standard]>=0.115.12",
     "httpx-sse>=0.4.0",
 ]
+
+[tool.setuptools.packages]
+find = {}
+include = ["l2wc_api"]
