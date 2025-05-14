@@ -41,7 +41,7 @@ build_frontend:
   stage: build
   image: node:20
   before_script:
-    - cd web_app  # adjust if your Vite project is in a different subdir
+    - # cd web_app  # adjust if your Vite project is in a different subdir
   script:
     - npm ci     # or use `npm install` if lockfile not used
     - npm run build
