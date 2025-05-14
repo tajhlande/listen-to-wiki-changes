@@ -37,17 +37,30 @@ run:
     paths:
       - build/*
 
-pages:
+build_frontend:
+  stage: build
+  image: node:20
+  before_script:
+    - cd web_app  # adjust if your Vite project is in a different subdir
   script:
-    - pip install sphinx sphinx-rtd-theme
-    - cd doc
-    - make html
-    - mv build/html/ ../public/
+    - npm ci     # or use `npm install` if lockfile not used
+    - npm run build
   artifacts:
     paths:
-      - public
-  rules:
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      - web_app/dist/  # adjust to your actual output path
+
+
+#pages:
+#  script:
+#    - pip install sphinx sphinx-rtd-theme
+#    - cd doc
+#    - make html
+#    - mv build/html/ ../public/
+#  artifacts:
+#    paths:
+#      - public
+#  rules:
+#    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 
 deploy:
   stage: deploy
