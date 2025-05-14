@@ -33,7 +33,6 @@ test:
 run:
   script:
     - pip install .
-    - fastapi run l2wc_api/mainpy
   artifacts:
     paths:
       - build/*
