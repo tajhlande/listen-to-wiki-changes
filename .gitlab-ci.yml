@@ -66,5 +66,5 @@ deploy:
   stage: deploy
   script:
     - pip install .
-    - fastapi run l2wc_api/main.py
+#    - fastapi run l2wc_api/main.py
   environment: production

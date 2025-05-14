@@ -55,6 +55,8 @@ To build the web app:
 
 FastAPI will then serve the built files directly to the browser, so no need for a second port.
 
+### Run the app in production
+
 To run FastAPI in production mode:
 
     uv run -- fastapi run l2wc_api/main.py
@@ -63,7 +65,12 @@ or also, if your Python virtual environment is enabled:
 
     fastapi run l2wc_api/main.py
 
+or in the USGI server, running uvicorn directly:
+
+    uvicorn l2wc_api.main:app --host 0.0.0.0 --port 8000
+
 Then browse to [http://localhost:8000/](http://localhost:8000/). 
 
+The `Procfile` contains instructions on running the app in Toolforge.
 
 
