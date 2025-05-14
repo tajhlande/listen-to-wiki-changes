@@ -22,5 +22,48 @@ data from a Python API.  This allows the browser app to subscribe to specific wi
 receive events about those wikis, greatly cutting down on network traffic bandwidth for the end user. 
 The event payloads are also smaller than those delivered from the Event Platform service, removing non-essential data.
 
+## Developer setup
+
+There are two apps here: a FastAPI python app in `l2wc/main.py`, and a Vue app in `web_app`.
+
+This app uses [uv](https://docs.astral.sh/uv/) to manage and run the Python app environment.
+
+### Run the app in dev mode
+
+To run the API in dev mode: 
+
+    uv run -- fastapi dev l2wc_api/main.py
+
+or also, if your Python virtual environment is activated:
+
+    fastapi dev l2wc_api/main.py
+
+To run the web app in dev mode: 
+
+    cd web_app
+    npm run dev
+
+Then you can browse to [http://localhost:5173/app](http://localhost:5173/app). 
+Hot reloading in both FastAPI and Vue is supported this way.
+
+### Build the app for production
+
+To build the web app:
+
+    cd web_app
+    npm run build
+
+FastAPI will then serve the built files directly to the browser, so no need for a second port.
+
+To run FastAPI in production mode:
+
+    uv run -- fastapi run l2wc_api/main.py
+
+or also, if your Python virtual environment is enabled:
+
+    fastapi run l2wc_api/main.py
+
+Then browse to [http://localhost:8000/](http://localhost:8000/). 
+
 
 

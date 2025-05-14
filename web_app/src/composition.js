@@ -5,8 +5,9 @@ const domParser = new DOMParser();
 console.log("Location.origin: " + location.origin);
 console.log("Import.meta.env.BASE_URL: " + import.meta.env.BASE_URL);
 
-// TODO remove this hack after debug
-const baseUrl = "http://localhost:8000";
+console.log("App mode: " + import.meta.env.MODE)
+const baseUrl = (import.meta.env.MODE === 'development') ? "http://localhost:8000" : location.origin;
+// const baseUrl = "http://localhost:8000";
 console.log('Base app URL: ' + baseUrl);
 
 /*
