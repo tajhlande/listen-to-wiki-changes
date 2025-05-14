@@ -9,6 +9,5 @@ dependencies = [
     "httpx-sse>=0.4.0",
 ]
 
-[tool.setuptools.packages]
-find = {}
-include = ["l2wc_api"]
+[tool.setuptools]
+packages = ["l2wc_api"]
