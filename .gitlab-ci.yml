@@ -64,5 +64,6 @@ build_frontend:
 
 deploy:
   stage: deploy
-  script: echo "Define your deployment script!"
+  script:
+    - fastapi run l2wc_api/main.py
   environment: production
