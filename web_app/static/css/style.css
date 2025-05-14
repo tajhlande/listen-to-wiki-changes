@@ -118,7 +118,7 @@ label {
 }
 .lang {
     color: #bdc3c7;
-    padding: auto .5em;
+    padding:  .5em; /* was auto .5em */
 }
 .log-bot {
     color: rgb(155, 89, 182);
@@ -159,7 +159,7 @@ label {
     color: #cc4732;
 }
 
-#loading p, {
+#loading p {
     text-align: center;
     margin: 0.5em;
 }
