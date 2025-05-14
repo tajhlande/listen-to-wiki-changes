@@ -3,7 +3,7 @@
 ## core functionality and usability
 * maybe sort the wiki list and languages 
 * check color scheme for color deficiency legibility
-* Use wiki display name and not domain name for new page and new user log messages
+* manually add wikidata to the list of wikis 
 
 ## feature matches to original
 * add link to user page in recent changes
@@ -29,13 +29,13 @@
 * add clear all button 
 
 ## developer doc and deployment readiness
-* add developer start documentation
+* add developer start documentation 
 * add other doc
 * clean up code comments 
 * delete unused code and files
 * test on 
-  * macos chrome
+  * macos chrome ✅
   * ios
   * android chrome browser
-* prod deployment 
+* prod deployment ✅
 * make a logo that can be the fav icon

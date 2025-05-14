@@ -60,13 +60,13 @@ function lengthChangeClass(lengthChange) {
             {{ change.bot ? '&#129302;' : '' }}
             {{ `${change.user}` }} created page
             <a target="_blank" :href="change.title_url" :title="change.title">{{change.title}}</a>
-            on {{change.domain}}
+            on {{ wikiCodeMap.get(change.code).displayName }}
             <span :class="lengthChangeClass(change.change_in_length)"> ({{ lengthChangeToText(change.change_in_length)}})</span>
           </span>
           <span v-if="change.event_type === 'new_user'" style="font-weight: bolder">
             Welcome
             <a target="_blank" :href="change.title_url" :title="change.title">{{ `${change.user}` }}</a>
-            to {{change.domain}}!
+            to {{ wikiCodeMap.get(change.code).displayName }}!
           </span>
         </li>
       </TransitionGroup>
