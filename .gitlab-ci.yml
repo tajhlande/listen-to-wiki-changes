@@ -65,5 +65,6 @@ build_frontend:
 deploy:
   stage: deploy
   script:
+    - pip install .
     - fastapi run l2wc_api/main.py
   environment: production
