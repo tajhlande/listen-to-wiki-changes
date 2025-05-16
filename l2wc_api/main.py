@@ -113,16 +113,6 @@ app.add_middleware(
 async def read_root():
     return RedirectResponse("/app")
 
-# @app.get("/")
-# async def read_root():
-#     """
-#     Placeholder method. this should eventually return the index of the Vue app.
-#     :return:
-#     """
-#     global wiki_dict
-#     assert len(wiki_dict.keys()) > 0, "Wiki dictionary is empty"
-#     return {"Hello": "World"}
-
 
 def load_wikis_list():
     """
@@ -147,7 +137,6 @@ def load_wikis_list():
             line = html.unescape(line)
             wiki_count = wiki_count + 1
             try:
-                # logger.debug(f"Processing line({wiki_count}): {line}")
                 wiki_metadata = dict(zip(wiki_list_columns, line.split(',')))
                 wiki_metadata['lang_code'] = 'multi' # until proven otherwise
 
@@ -201,11 +190,9 @@ def load_wikis_list():
                                     'enName': wiki_metadata['language'],
                                     'localName': wiki_metadata['loclang']
                                 }
-                                # logger.debug(f"Creating language dict entry for prefix {prefix}: {language_dict[prefix]}")
                             wiki_metadata['langCode'] = wiki_metadata['prefix']
 
                         # index the wiki by wiki_code
-                        #logger.debug(f"Adding wiki {wiki_type}")
                         if wiki_type not in wiki_types:
                             logger.debug(f"Adding wiki type {wiki_type} to list of wiki types")
                         wiki_types[wiki_type] = { 'wikiType': wiki_type }
@@ -214,13 +201,11 @@ def load_wikis_list():
                         wiki_metadata['display_name'] = wiki_metadata['language'] + " " + wiki_metadata['type'].capitalize()
                         wiki_dict[wiki_code] = wiki_metadata
                         wiki_host_index[prefix + "." + wiki_type + ".org"] = wiki_code # a terrible hack but ...
-                        #logger.debug(f"Added wiki {wiki_code}")
                 else:
                     logger.warning(f"Skipping wiki with missing or invalid type: {wiki_metadata}")
 
             except Exception:
                 logger.exception(f"Error processing line({wiki_count}): {line}")
-
 
     # debug logging
     logger.info(f"Finished loading wiki list. Processed {wiki_count} data rows.")
@@ -228,9 +213,6 @@ def load_wikis_list():
     logger.debug(f"Found {len(language_dict)} languages")
     logger.debug(f"Found {len(wiki_list)} wikis listed")
     logger.debug(f"Indexed {len(wiki_dict)} wikis")
-    #logger.debug(f"Sample Language dict ({len(language_dict)}): {dict(itertools.islice(language_dict.items(), 10))}")
-    #logger.debug(f"Sample Wiki dict ({len(wiki_dict)}): {dict(itertools.islice(wiki_dict.items(), 10))}")
-    #logger.debug(f"Wiki list ({wiki_count}): {wiki_list}")
 
 
 @app.get("/api/wikis/")
@@ -251,8 +233,6 @@ async def get_wiki_codes():
     :return: a JSON array containing dicts that contain wiki code and display name for each wiki
     """
     return  [{ 'wikiCode': wc, 'displayName': wiki_dict[wc]['display_name'] } for wc in wiki_dict.keys()]
-    #     "wiki_codes": {wc: { 'wiki_code': wc, 'display_name': wiki_dict[wc]['display_name'] } for wc in wiki_dict.keys()} #wiki_dict.keys(),
-    # }
 
 
 @app.get("/api/wiki/{wiki_code}")
@@ -307,6 +287,7 @@ class EvictingQueue(asyncio.Queue):
 # Global subscriber registry
 active_subscribers: Set[EvictingQueue] = set()
 
+
 def compute_length_change(raw_event):
     length_obj = raw_event.get('length', 'no_length')
     if length_obj == 'no_length':
@@ -348,7 +329,6 @@ def refine_event(raw_event):
             wiki = wiki_dict[wiki_code]
             refined_event['code'] = wiki_code
             refined_event['wiki_type'] = wiki['type']
-            # logger.debug(f"Wiki for event: {wiki}")
             refined_event['language'] = wiki['language']
         except Exception:
             logger.exception(f"Error enriching refined event: {raw_event}")
@@ -362,7 +342,6 @@ def refine_event(raw_event):
         refined_event['event_type'] = 'edit'
 
     return refined_event
-
 
 
 async def filter_pass(refined_event, requested_codes, requested_types, requested_langs) -> bool:
@@ -405,8 +384,7 @@ async def edit_event_relay_loop():
                                    (re_type == 'new' and ns is 0)):
                                 continue
                         except:
-                            continue # if for some reason the event doesn't have parseable JSON data or a namespace, skip it.
-                        # logger.debug(f"Raw event['namespace']: '{raw_event['namespace']}', type: '{raw_event['type']}', log_type: '{raw_event.get('log_type', '')}'")
+                            continue # if the event doesn't have parseable JSON data or a namespace, skip it.
 
                         refined_event = refine_event(raw_event)
                         if refined_event['event_type'] == 'unknown':
@@ -425,8 +403,6 @@ async def edit_event_relay_loop():
             logger.exception(f"Relay loop crashed: {e}")
 
 
-
-
 async def filtered_event_generator(codes: list[str], types: list[str], langs: list[str]) -> AsyncGenerator[str, None]:
     """
     Each connecting client gets a separate filtered event generator.
@@ -440,7 +416,6 @@ async def filtered_event_generator(codes: list[str], types: list[str], langs: li
     language_names = [language_dict[lang_code]['enName'] for lang_code in langs]
     try:
         while True:
-            # map languages
             try:
                 # Wait for a new event with timeout
                 refined_event = await asyncio.wait_for(queue.get(), timeout=15.0)
@@ -465,9 +440,9 @@ async def read_events(
     """
     Given the requested lists of desired wiki codes, types, and/or languages, return a filtered event stream
     of matching recent changes events.
-    :param wiki_codes_str:
-    :param wiki_types_str:
-    :param wiki_langs_str:
+    :param wiki_codes_str: optionally, a comma separated list of wiki codes
+    :param wiki_types_str: optionally, a comma separated list of wiki types
+    :param wiki_langs_str: optionally, a comma separated list of wiki language codes
     :return: an event stream with content type "text/event-stream" containing the requested events
     """
     logger.debug(f"Incoming event stream request with filters: {wiki_codes_str}, {wiki_types_str}, {wiki_langs_str}")
@@ -491,8 +466,10 @@ def main():
     """
     If for some reason someone tries to run this module directly, tell them what to do
     """
-    print("Run in dev with: uv run -- fastapi dev main.py" 
-          "Run in prod with: source .venv/bin/activate; python -m fastapi run main.py")
+    print("Run in dev with: uv run -- fastapi dev main.py\n" 
+          "Run in prod with: source .venv/bin/activate; python -m fastapi run main.py\n"
+          "Or, alternatively: uvicorn l2wc_api.main:app --host 0.0.0.0 --port 8000"
+          )
 
 
 if __name__ == "__main__":

@@ -28,6 +28,15 @@ There are two apps here: a FastAPI python app in `l2wc/main.py`, and a Vue app i
 
 This app uses [uv](https://docs.astral.sh/uv/) to manage and run the Python app environment.
 
+Unfortunately, Toolforge deployment doesn't support `uv`, so we currently have both a `pyproject.toml`
+and a `requirements.txt`.  Both should be kept up to date.
+
+To install the requirements: 
+
+    uv add -r requirements.txt
+    uv pip install 
+
+
 ### Run the app in dev mode
 
 To run the API in dev mode: 
@@ -50,10 +59,9 @@ Hot reloading in both FastAPI and Vue is supported this way.
 
 To build the web app:
 
-    cd web_app
     npm run build
 
-FastAPI will then serve the built files directly to the browser, so no need for a second port.
+FastAPI will then serve the built files directly to the browser, so no need for a second process or network port.
 
 ### Run the app in production
 

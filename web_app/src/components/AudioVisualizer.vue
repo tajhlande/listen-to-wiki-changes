@@ -40,7 +40,6 @@ function new_user_action(data, svg_area) {
                   'Welcome, ' + data.user + ' has joined ' + wikiName + '!'];
   let message = Math.round(Math.random() * (messages.length - 1));
 
-  //var user_link = 'http://' + lid + '.wikipedia.org/w/index.php?title=User_talk:' + data.user + '&action=edit&section=new';
   let user_group = svg_area.append('g');
 
   let user_container = user_group.append('a')
@@ -95,8 +94,6 @@ onMounted(() => {
 
     const isAddingContent = data.change_in_length > 0;
 
-    // console.log('delta length: ' + data.change_in_length + ', is adding content: ' + isAddingContent);
-
     // calculate the 'magnitude' of both the audio and visuals
     const [origSize, scaledSize] = calculateSize(recentChange.value.data);
 
@@ -111,7 +108,6 @@ onMounted(() => {
         playSound(scaledSize, 'sub')
       }
     }
-
 
     // draw circle
     let label_text = data.title;

@@ -1,13 +1,10 @@
 import {reactive, ref, shallowReactive, toRaw, watch} from "vue";
 
-const domParser = new DOMParser();
-//const baseUrl = location.origin; //+ import.meta.env.BASE_URL;
 console.log("Location.origin: " + location.origin);
 console.log("Import.meta.env.BASE_URL: " + import.meta.env.BASE_URL);
 
 console.log("App mode: " + import.meta.env.MODE)
 const baseUrl = (import.meta.env.MODE === 'development') ? "http://localhost:8000" : location.origin;
-// const baseUrl = "http://localhost:8000";
 console.log('Base app URL: ' + baseUrl);
 
 /*
@@ -35,10 +32,6 @@ const wikiTypes = await fetch(baseUrl + "/api/types")
 console.log("First 10 wiki codes (" + wikiCodes.length + " total): " + JSON.stringify(wikiCodes.slice(0, 10)));
 console.log("First 10 wiki langs (" + wikiLangs.length + " total): " + JSON.stringify(wikiLangs.slice(0, 10)));
 console.log("First 10 wiki types (" + wikiTypes.length + " total): " + JSON.stringify(wikiTypes.slice(0, 10)));
-// console.dir(wikiCodes)
-// console.dir(wikiLangs)
-// console.dir(wikiTypes)
-// console.log("First wiki code object: " + JSON.stringify(wikiCodes[0]))
 
 export const getWikiCodes = () => wikiCodes.map((item) => reactive(item));
 export const getWikiLangs = () => wikiLangs.map((item) => reactive(item));

@@ -59,7 +59,6 @@ export function playSound(size, type) {
     index = Math.min(Object.keys(celesta).length - 1, index);
     index = Math.max(1, index);
 
-    // TODO: do we want to cap amount of currently playing sounds like in the original version?
     if (type == 'add') {
         celesta[index].play();
     } else {
@@ -67,7 +66,6 @@ export function playSound(size, type) {
     }
 }
 
-// TODO: Need to figure were to get new user events from
 export function playRandomSwell() {
     var index = Math.round(Math.random() * (swells.length - 1));
     swells[index].play();

@@ -18,6 +18,7 @@
 * add ability to filter for edits with a hashtag in the edit summary
 * link to diffs instead of pages
 * consider identifying unregistered users (or temp accounts)
+* cap amount of currently playing sounds like in the original version
 
 ## enhancements
 * stereo pan the sounds left or right based on screen position of circle
@@ -29,13 +30,9 @@
 * add clear all button 
 
 ## developer doc and deployment readiness
-* add developer start documentation 
-* add other doc
-* clean up code comments 
-* delete unused code and files
 * test on 
   * macos chrome ✅
-  * ios
-  * android chrome browser
+  * ios ✅
+  * android chrome browser ❌
 * prod deployment ✅
 * make a logo that can be the fav icon

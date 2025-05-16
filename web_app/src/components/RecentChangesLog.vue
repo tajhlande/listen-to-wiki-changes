@@ -38,10 +38,6 @@ function lengthChangeClass(lengthChange) {
   }
   return '';
 }
-
-
-
-// decodeURI(change.meta.uri)
 </script>
 
 <template>

@@ -19,36 +19,7 @@ const tabsData = [
   }
 ];
 
-// const groupWikisByProperty = (wikis, property) => {
-//   const map = wikis.reduce((accumulator, wiki) => {
-//     if (accumulator.has(wiki[property])) {
-//       accumulator.get(wiki[property]).push(wiki);
-//     } else {
-//       accumulator.set(wiki[property], [wiki]);
-//     }
-//     return accumulator;
-//   }, new Map());
-//
-//   let arr = [];
-//   for (const [key, value] of map.entries()) {
-//     arr.push({
-//       title: key,
-//       lang: key,
-//       link: value[0].link,
-//       checked: computed({
-//         get() {
-//           return value.find((wiki) => !wiki.checked) ? false : true;
-//         },
-//         set(newVal) {
-//           value.forEach((wiki) => (wiki.checked = newVal));
-//         },
-//       }),
-//     });
-//   }
-//   return arr;
-// };
-
-// these are lists now
+// these are lists of items
 const wikiCodes = reactive(getWikiCodes());
 const wikiLangs = reactive(getWikiLangs());
 const wikiTypes = reactive(getWikiTypes());
@@ -58,18 +29,10 @@ for (let wikiCode of wikiCodes) { wikiCode['checked'] = false }
 for (let wikiLang of wikiLangs) { wikiLang['checked'] = false }
 for (let wikiType of wikiTypes) { wikiType['checked'] = false }
 
-// const wikiCodesList = Object.keys(wikiCodes).map((key) => [key, obj[key]]);
-// const wikiLangsList = Object.keys(wikiLangs).map((key) => [key, obj[key]]);
-// const wikiTypesList = Object.keys(wikiTypes).map((key) => [key, obj[key]]);
-
-// const wikisBylang = ref(groupWikisByProperty(wikis.value, "loc_lang"));
-//const wikisByType = ref(groupWikisByProperty(wikis.value, "type"));
-
 const {
   wikiCodeFilter,
   wikiLangFilter,
-  wikiTypeFilter,
-  recentChange
+  wikiTypeFilter
 } = useRecentChange();
 
 // Watch every checkbox for change
@@ -96,14 +59,6 @@ wikiTypes.forEach((wikiType) => {
     wikiType.checked ? wikiTypeFilter.add(wikiType.wikiType) : wikiTypeFilter.delete(wikiType.wikiType);
   })
 })
-
-
-
-// wikis.value.forEach((wiki) => {
-//   watch(wiki, () => {
-//     wiki.checked ? filter.add(wiki.link) : filter.delete(wiki.link);
-//   });
-// });
 
 const searchInput = ref("");
 
@@ -143,7 +98,6 @@ const langsSearchResults = computed(() => {
   console.log("Returning full lang search dataset")
   return langsSearchData.value;
 });
-
 
 const typesSearchData = computed(() => {
   return wikiTypes;
