@@ -2,6 +2,8 @@
 
 Real-time visualization and sonification of Wikipedia activity.
 
+Try it out at [https://listen-to-wiki-changes.toolforge.org/](https://listen-to-wiki-changes.toolforge.org/)
+
 ## About
 
 *Listen to Wiki Changes* is a refresh of a project originally built by Hatnote,
