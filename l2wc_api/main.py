@@ -370,6 +370,7 @@ async def edit_event_relay_loop():
     global active_subscribers
     while True:
         # repeating because the server closes the connection with an incomplete message after a while
+        logger.info("Starting async streaming client")
         try:
             async with AsyncClient(timeout=None) as streaming_client:
                 async with aconnect_sse(streaming_client, "GET", WIKI_EVENT_STREAM_URL) as event_source:
@@ -395,12 +396,15 @@ async def edit_event_relay_loop():
                                 queue.put_nowait(refined_event)
                             except Exception:
                                 pass
+            logger.warning("Async streaming client ended stream")
 
         except asyncio.CancelledError:
             logger.info("Relay loop received and handled cancel signal.")
             raise
         except Exception as e:
-            logger.exception(f"Relay loop crashed: {e}")
+            logger.exception(f"Async streaming client crashed: {e}")
+        finally:
+            logger.info("Restarting relay loop.")
 
 
 async def filtered_event_generator(codes: list[str], types: list[str], langs: list[str]) -> AsyncGenerator[str, None]:
