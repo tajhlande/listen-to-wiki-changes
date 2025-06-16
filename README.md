@@ -65,7 +65,7 @@ To build the web app:
 
 FastAPI will then serve the built files directly to the browser, so no need for a second process or network port.
 
-### Run the app in production
+### Run the app in production mode
 
 To run FastAPI in production mode:
 
@@ -82,5 +82,27 @@ or in the USGI server, running uvicorn directly:
 Then browse to [http://localhost:8000/](http://localhost:8000/). 
 
 The `Procfile` contains instructions on running the app in Toolforge.
+
+### Build the app on the toolforge server
+
+First, ssh to toolforge:
+
+    ssh login.toolforge.org
+
+Become the tool:
+
+    become listen-to-wiki-changes
+
+Build the tool:
+
+    toolforge build start https://gitlab.wikimedia.org/toolforge-repos/listen-to-wiki-changes
+
+Verify the build:
+
+    toolforge build show
+
+Start the service:
+
+    toolforge webservice buildservice start --mount=none  --health-check-path /api/types
 
 
