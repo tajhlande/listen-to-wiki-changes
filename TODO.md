@@ -5,6 +5,9 @@
 * check color scheme for color deficiency legibility
 * manually add wikidata to the list of wikis 
 
+## bugs
+API seems to die after being idle for a couple of days
+
 ## feature matches to original
 * add link to user page in recent changes
 * maybe: change color scheme back to original: Green circles show edits from unregistered contributors, and purple circles mark edits performed by automated bots.
