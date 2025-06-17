@@ -1,6 +1,6 @@
 <script setup>
 import { CdxCheckbox, CdxSearchInput, CdxTabs, CdxTab } from "@wikimedia/codex";
-import { computed, watch, ref, reactive } from "vue";
+import { computed, watch, ref, reactive, onMounted } from "vue";
 import { useRecentChange, getWikiCodes, getWikiLangs, getWikiTypes } from "../composition.js";
 
 const currentTab = ref("all");
@@ -35,8 +35,19 @@ const {
   wikiTypeFilter
 } = useRecentChange();
 
+var enWikiCode, deWikiCode, zhWikiCode;
+
 // Watch every checkbox for change
 wikiCodes.forEach((wikiCode) => {
+  if (wikiCode.wikiCode === 'en_wikipedia') {
+    enWikiCode = wikiCode;
+  } else if (wikiCode.wikiCode === 'de_wikipedia') {
+    deWikiCode = wikiCode;
+  } else if (wikiCode.wikiCode === 'zh_wikipedia') {
+    zhWikiCode = wikiCode;
+  }
+
+
   watch(wikiCode, () => {
     if (wikiCode.checked) {
       wikiCodeFilter.add(wikiCode.wikiCode)
@@ -47,6 +58,8 @@ wikiCodes.forEach((wikiCode) => {
     // wikiCode.checked ? wikiCodeFilter.add(wikiCode.wiki_code) : wikiCodeFilter.delete(wikiCode.wiki_code);
   })
 })
+
+console.assert(enWikiCode != null, "enWikiCode was not found");
 
 wikiLangs.forEach((wikiLang) => {
   watch(wikiLang, () => {
@@ -116,6 +129,18 @@ const typesSearchResults = computed(() => {
   console.log("Returning full lang search dataset")
   return typesSearchData.value;
 });
+
+onMounted(() => {
+  console.log("Adding event listener for start-listening");
+  window.addEventListener('start-listening', (event) => {
+    // Handle the event
+    console.log('Received event to start listening');
+    enWikiCode.checked = true;
+    deWikiCode.checked = true;
+    zhWikiCode.checked = true;
+  });
+});
+
 </script>
 
 <template>
@@ -124,17 +149,17 @@ const typesSearchResults = computed(() => {
     <cdx-tabs class="selector-tabs" v-model:active="currentTab" :framed="true">
       <cdx-tab v-for="(tab, index) in tabsData" :key="index" :name="tab.name" :label="tab.label">
         <div v-if="currentTab === 'all'" id="wiki-codes-grid" class="selector-grid">
-          <cdx-checkbox v-for="wikiCode in codesSearchResults" v-model="wikiCode.checked" :key="wikiCode.wikiCode">
+          <cdx-checkbox v-for="wikiCode in codesSearchResults" v-model="wikiCode.checked" :key="wikiCode.wikiCode" :ref="'cb-' + wikiCode.wikiCode">
             <span v-html="wikiCode.displayName"></span>
           </cdx-checkbox>
         </div>
         <div v-if="currentTab === 'bylang'" id="wiki-langs-grid" class="selector-grid">
-          <cdx-checkbox v-for="lang in langsSearchResults" v-model="lang.checked" :key="lang.langCode">
+          <cdx-checkbox v-for="lang in langsSearchResults" v-model="lang.checked" :key="lang.langCode" :ref="'cb-' + lang.langCode">
             <span v-html="lang.enName + ' (' + lang.localName + ')'"></span>
           </cdx-checkbox>
         </div>
         <div v-if="currentTab === 'bytype'" id="wiki-types-grid" class="selector-grid">
-          <cdx-checkbox v-for="wikiType in typesSearchResults" v-model="wikiType.checked" :key="wikiType.wikiType">
+          <cdx-checkbox v-for="wikiType in typesSearchResults" v-model="wikiType.checked" :key="wikiType.wikiType" :ref="'cb-' + wikiType.wikiType">
             <span v-html="wikiType.wikiType"></span>
           </cdx-checkbox>
         </div>
