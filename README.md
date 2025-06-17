@@ -103,6 +103,6 @@ Verify the build:
 
 Start the service:
 
-    toolforge webservice buildservice start --mount=none  --health-check-path /api/types
+    toolforge webservice buildservice start --mount=none  --health-check-path /api/health_check
 
 
