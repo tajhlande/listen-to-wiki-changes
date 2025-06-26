@@ -6,7 +6,7 @@
 * manually add wikidata to the list of wikis 
 
 ## bugs
-API seems to die after being idle for a couple of days – this may be fixed by the health check now
+* most of the text isn't readable in dark mode 
 
 ## feature matches to original
 * add link to user page in recent changes
@@ -30,6 +30,7 @@ API seems to die after being idle for a couple of days – this may be fixed by 
 * pin header to top while scrolling down page
 * tweak aspect ratio for svg, make mobile responsive
 * add clear all button 
+* include events where a Wikidata edit triggers a page reparse
 
 ## developer doc and deployment readiness
 * test on 
