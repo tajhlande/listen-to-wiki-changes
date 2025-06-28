@@ -50,10 +50,10 @@ onconnect = (e) => {
                 console.info('Event stream started from URL: ' + eventAPIUrl);
             };
             eventSource.onerror = (event) => {
-                console.error('Error from event stream', event);
+                console.error('Error from event stream. Event: ', JSON.stringify(event));
             };
             eventSource.onclose = (event) => {
-                console.warn('Event stream closed', event);
+                console.warn('Event stream closed. Event: ', JSON.stringify(event));
             }
             eventSource.addEventListener("wiki_event", (event) => {
                 // event.data will be a JSON message

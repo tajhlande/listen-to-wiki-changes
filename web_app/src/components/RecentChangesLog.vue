@@ -109,4 +109,12 @@ ul {
 .shrink-change {
   color: #de9332;
 }
+
+.wikidata-logo-inline {
+  display: inline-block;
+  width: 1.3em;
+  height: 1.3em;
+  margin: 1px;
+  vertical-align: baseline;
+}
 </style>

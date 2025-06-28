@@ -24,6 +24,7 @@ KNOWN_EVENT_SCHEMA = "/mediawiki/recentchange/1.0.0" # we will watch for this in
 
 # Wikis with names that don't follow conventions
 SPECIAL_WIKIS = {
+    "www.wikidata.org": ("wikidata", "Wikidata"),
     "www.mediawiki.org": ("mediawiki", "MediaWiki"),
     "commons.wikimedia.org": ("commons", "Commons Wiki"),
     "species.wikimedia.org": ("species", "WikiSpecies"),
@@ -32,6 +33,7 @@ SPECIAL_WIKIS = {
     "nostalgia.wikipedia.org": ("nostalgia", "Nostalgia Wiki"),
     "outreach.wikimedia.org": ("outreach", "Outreach Wiki"),
     "test.wikipedia.org": ("test", "Test Wiki"),
+    "test.wikidata.org": ("testwikidata", "Test Wikidata"),
     "wikitech.wikimedia.org": ("wikitech", "WikiTech"),
     "strategy.wikimedia.org": ("strategy", "Strategy Wiki"),
     "foundation.wikimedia.org": ("foundation", "Foundation Wiki"),
@@ -207,7 +209,20 @@ def load_wikis_list():
             except Exception:
                 logger.exception(f"Error processing line({wiki_count}): {line}")
 
-    # debug logging
+    # manually add wikidata and test wikidata because they aren't in the remote list for some reason
+    wiki_code = 'wikidata'
+    wiki_metadata = {'type': 'special', 'lang_code': 'multi', 'code': wiki_code, 'display_name': 'Wikidata'}
+    wiki_dict[wiki_code] = wiki_metadata
+    wiki_host_index['www.wikidata.org'] = wiki_code
+    wiki_list.append(wiki_metadata)
+
+    wiki_code = 'testwikidata'
+    wiki_metadata = {'type': 'special', 'lang_code': 'multi', 'code': wiki_code, 'display_name': 'Test Wikidata'}
+    wiki_dict[wiki_code] = wiki_metadata
+    wiki_host_index['test.wikidata.org'] = wiki_code
+    wiki_list.append(wiki_metadata)
+
+    # finished. info and debug logging
     logger.info(f"Finished loading wiki list. Processed {wiki_count} data rows.")
     logger.debug(f"Found {len(wiki_types)} wiki types: {list(wiki_types)}")
     logger.debug(f"Found {len(language_dict)} languages")
@@ -307,16 +322,16 @@ def refine_event(raw_event):
     try:
         refined_event = {
             "id": raw_event.get('id', uuid4()), # not sure if this matters except that Vue wants it to be unique
-            "domain": raw_event['meta']['domain'] or "",
+            "domain": raw_event['meta']['domain'] if 'meta' in raw_event and 'domain'in raw_event['meta'] else "",
             "wiki_type": "", # we don't know yet
             "event_type": "unknown", # we don't know yet
             "code": "", # we don't know yet
             "language": "", # we don't know yet
-            "title": raw_event['title'] or "",
-            "title_url": raw_event['title_url'] or "",
-            "timestamp": raw_event['timestamp'] or "",
-            "user": raw_event['user'] or "",
-            "bot": raw_event['bot'] or "",
+            "title": raw_event['title'] if 'title' in raw_event else "",
+            "title_url": raw_event['title_url'] if 'title_url' in raw_event else "",
+            "timestamp": raw_event['timestamp'] if 'timestamp' in raw_event else "",
+            "user": raw_event['user'] if 'user' in raw_event else "",
+            "bot": raw_event['bot'] if 'bot' in raw_event else "",
             "change_in_length": compute_length_change(raw_event),
         }
     except Exception:
@@ -328,8 +343,8 @@ def refine_event(raw_event):
             wiki_code = wiki_host_index[raw_event['meta']['domain']]
             wiki = wiki_dict[wiki_code]
             refined_event['code'] = wiki_code
-            refined_event['wiki_type'] = wiki['type']
-            refined_event['language'] = wiki['language']
+            refined_event['wiki_type'] = wiki['type'] if 'type' in wiki else None
+            refined_event['language'] = wiki['language'] if 'language' in wiki else 'multi' # a strong assumption
         except Exception:
             logger.exception(f"Error enriching refined event: {raw_event}")
 
@@ -449,7 +464,7 @@ async def read_events(
     :param wiki_langs_str: optionally, a comma separated list of wiki language codes
     :return: an event stream with content type "text/event-stream" containing the requested events
     """
-    logger.debug(f"Incoming event stream request with filters: {wiki_codes_str}, {wiki_types_str}, {wiki_langs_str}")
+    logger.debug(f"Incoming event stream request with filters: {wiki_codes_str}; {wiki_types_str}; {wiki_langs_str}")
     if not wiki_codes_str and not wiki_types_str and not wiki_langs_str:
         raise HTTPException(
             status_code=400,
