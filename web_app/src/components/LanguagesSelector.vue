@@ -1,5 +1,5 @@
 <script setup>
-import { CdxCheckbox, CdxSearchInput, CdxTabs, CdxTab } from "@wikimedia/codex";
+import {CdxCheckbox, CdxSearchInput, CdxTabs, CdxTab, CdxButton} from "@wikimedia/codex";
 import { computed, watch, ref, reactive, onMounted } from "vue";
 import { useRecentChange, getWikiCodes, getWikiLangs, getWikiTypes } from "../composition.js";
 
@@ -141,30 +141,43 @@ onMounted(() => {
   });
 });
 
+function clearAllSelections() {
+  console.log("Clearing all selections");
+  for (let wikiCode of wikiCodes) { if (wikiCode.checked) wikiCode.checked = false; }
+  for (let wikiLang of wikiLangs) { if (wikiLang.checked) wikiLang.checked = false; }
+  for (let wikiType of wikiTypes) { if (wikiType.checked) wikiType.checked = false; }
+
+}
+
 </script>
 
 <template>
   <div id="selector-container" class="anchor-target">
     <cdx-search-input v-model="searchInput" aria-label="Search Wiki Codes" placeholder="e.g. English" />
-    <cdx-tabs class="selector-tabs" v-model:active="currentTab" :framed="true">
-      <cdx-tab v-for="(tab, index) in tabsData" :key="index" :name="tab.name" :label="tab.label">
-        <div v-if="currentTab === 'all'" id="wiki-codes-grid" class="selector-grid">
-          <cdx-checkbox v-for="wikiCode in codesSearchResults" v-model="wikiCode.checked" :key="wikiCode.wikiCode" :ref="'cb-' + wikiCode.wikiCode">
-            <span v-html="wikiCode.displayName"></span>
-          </cdx-checkbox>
-        </div>
-        <div v-if="currentTab === 'bylang'" id="wiki-langs-grid" class="selector-grid">
-          <cdx-checkbox v-for="lang in langsSearchResults" v-model="lang.checked" :key="lang.langCode" :ref="'cb-' + lang.langCode">
-            <span v-html="lang.enName + ' (' + lang.localName + ')'"></span>
-          </cdx-checkbox>
-        </div>
-        <div v-if="currentTab === 'bytype'" id="wiki-types-grid" class="selector-grid">
-          <cdx-checkbox v-for="wikiType in typesSearchResults" v-model="wikiType.checked" :key="wikiType.wikiType" :ref="'cb-' + wikiType.wikiType">
-            <span v-html="wikiType.wikiType"></span>
-          </cdx-checkbox>
-        </div>
-      </cdx-tab>
-    </cdx-tabs>
+    <div id="tabs-row">
+      <cdx-tabs class="selector-tabs" v-model:active="currentTab" :framed="true">
+        <cdx-tab v-for="(tab, index) in tabsData" :key="index" :name="tab.name" :label="tab.label">
+          <div v-if="currentTab === 'all'" id="wiki-codes-grid" class="selector-grid">
+            <cdx-checkbox v-for="wikiCode in codesSearchResults" v-model="wikiCode.checked" :key="wikiCode.wikiCode" :ref="'cb-' + wikiCode.wikiCode">
+              <span v-html="wikiCode.displayName"></span>
+            </cdx-checkbox>
+          </div>
+          <div v-if="currentTab === 'bylang'" id="wiki-langs-grid" class="selector-grid">
+            <cdx-checkbox v-for="lang in langsSearchResults" v-model="lang.checked" :key="lang.langCode" :ref="'cb-' + lang.langCode">
+              <span v-html="lang.enName + ' (' + lang.localName + ')'"></span>
+            </cdx-checkbox>
+          </div>
+          <div v-if="currentTab === 'bytype'" id="wiki-types-grid" class="selector-grid">
+            <cdx-checkbox v-for="wikiType in typesSearchResults" v-model="wikiType.checked" :key="wikiType.wikiType" :ref="'cb-' + wikiType.wikiType">
+              <span v-html="wikiType.wikiType"></span>
+            </cdx-checkbox>
+          </div>
+        </cdx-tab>
+      </cdx-tabs>
+    <cdx-button id="clear-all-button" aria-label="Clear all selections" @click="clearAllSelections()">
+      Clear all selections
+    </cdx-button>
+    </div>
   </div>
 </template>
 
@@ -188,8 +201,22 @@ onMounted(() => {
 
 #selector-container {
   width: auto;
-  max-width: 800px;
+  max-width: 1000px;
   margin: auto;
   margin-bottom: 1rem;
+}
+
+.selector-tabs {
+  flex-grow: 5;
+}
+
+#tabs-row {
+  display: flex;
+}
+
+#clear-all-button {
+  height: fit-content;
+  justify-content: flex-end;
+  margin: 0.25em;
 }
 </style>

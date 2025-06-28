@@ -28,7 +28,6 @@
 * show total counts for wikis, languages, and types on tab labels
 * pin header to top while scrolling down page
 * tweak aspect ratio for svg, make mobile responsive
-* add clear all button 
 * include events where a Wikidata edit triggers a page reparse
 
 ## developer doc and deployment readiness
