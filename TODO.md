@@ -3,7 +3,6 @@
 ## core functionality and usability
 * maybe sort the wiki list and languages 
 * check color scheme for color deficiency legibility
-* manually add wikidata to the list of wikis 
 
 ## bugs
 * most of the text isn't readable in dark mode 
