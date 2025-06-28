@@ -1,12 +1,12 @@
 [project]
 name = "listen-to-wiki-changes"
-version = "0.1.0"
+version = "0.2.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
-    "fastapi[standard]>=0.115.12",
-    "httpx-sse>=0.4.0",
+    "fastapi[standard]>=0.115.14",
+    "httpx-sse>=0.4.1",
 ]
 
 [tool.setuptools]

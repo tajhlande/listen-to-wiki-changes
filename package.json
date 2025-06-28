@@ -1,7 +1,7 @@
 {
   "name": "listen-to-wiki-changes",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.2.0",
   "type": "module",
   "scripts": {
     "dev": "vite --config web_app/vite.config.js",
