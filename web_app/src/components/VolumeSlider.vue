@@ -68,7 +68,7 @@ onMounted(() => {
   width: 100px;
   margin-left: 5px;
   margin-right: 40px;
-
 }
+
 
 </style>

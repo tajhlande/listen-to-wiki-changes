@@ -78,16 +78,34 @@ header ul {
     border-color: var(--border-color-base);
     background-color: var(--background-color-base)
   }
+  a {
+    color: #428acc;
+  }
+  a:hover {
+    color: #e35036;
+  }
+  #volume-slider .noUi-connect {
+    background: #428acc;
+  }
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    color: #213547;
+    color: #d0d8dd;
     background-color: #3D3D3D;
   }
   header {
     border-color: var(--border-color-base);
     background-color: #3D3D3D;
+  }
+  a {
+    color: #66b3ff;
+  }
+  a:hover {
+    color: #e35036;
+  }
+  #volume-slider .noUi-connect {
+    background: #26527a;
   }
 }
 
@@ -124,12 +142,4 @@ header ul {
 
 .anchor-target {
   scroll-margin-top: 48px; /* height of your fixed header */
-}
-
-
-a {
-  color: #438acc;
-}
-a:hover {
-  color: #e35036;
 }

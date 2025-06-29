@@ -83,7 +83,7 @@ function lengthChangeClass(lengthChange) {
   margin: 1rem auto;
   border-style: var(--border-style-base);
   border-width: var(--border-width-base);
-  border-color: var(--border-color-inverted);
+  border-color: var(--border-color-base);
 }
 
 #edit-counter {
