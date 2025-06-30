@@ -33,11 +33,11 @@ This app uses [uv](https://docs.astral.sh/uv/) to manage and run the Python app 
 Unfortunately, Toolforge deployment doesn't support `uv`, so we currently have both a `pyproject.toml`
 and a `requirements.txt`.  Both should be kept up to date.
 
-To install the requirements: 
+To install the requirements:
 
-    uv add -r requirements.txt
-    uv pip install 
-
+    uv venv
+    source .venv/bin/activate
+    uv pip install -r requirements.txt
 
 ### Run the app in dev mode
 
