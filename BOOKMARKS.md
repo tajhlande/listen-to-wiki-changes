@@ -30,3 +30,8 @@ A collection of useful pages for reference or future work
 * [NOC DB lists](https://noc.wikimedia.org/conf/#dblist)
 * [Movement Insights Canonical Data](https://gitlab.wikimedia.org/repos/movement-insights/canonical-data)
 
+## Test pages for Wikidata changes triggering Wikipedia page reparses
+* [Calle Blanquerna on Test Wiki](https://test.wikipedia.org/wiki/Calle_Blanquerna) has this template: `{{ #property: P7 | from = Q18846 }}`
+* [Q18846 on Test Wikidata](https://test.wikidata.org/wiki/Q18846)
+* [MW Manual:recentchanges table](https://www.mediawiki.org/wiki/Manual:Recentchanges_table#rc_type)
+
