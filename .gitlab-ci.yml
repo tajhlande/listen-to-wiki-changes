@@ -20,6 +20,7 @@ cache:
 
 before_script:
   - python3 --version
+  - apt-get update && apt-get install -y python3-pip
   - python3 -m ensurepip --upgrade
   - pip --version  # For debugging
   - pip install virtualenv
