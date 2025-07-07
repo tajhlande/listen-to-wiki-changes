@@ -5,7 +5,7 @@
 * check color scheme for color deficiency legibility
 
 ## bugs
-* most of the text isn't readable in dark mode 
+* 
 
 ## feature matches to original
 * add link to user page in recent changes
