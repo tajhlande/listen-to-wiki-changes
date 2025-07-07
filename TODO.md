@@ -5,7 +5,7 @@
 * check color scheme for color deficiency legibility
 
 ## bugs
-* 
+* when window/tab doesn't have focus, circles are created but not deleted, leading to lag
 
 ## feature matches to original
 * add link to user page in recent changes
