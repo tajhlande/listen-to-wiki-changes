@@ -22,7 +22,6 @@
 * cap amount of currently playing sounds
 
 ## enhancements
-* stereo pan the sounds left or right based on screen position of circle
 * give bot edits a different fill pattern
 * show total counts for wikis, languages, and types on tab labels
 * make mobile responsive
