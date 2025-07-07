@@ -143,16 +143,18 @@ onMounted(() => {
 
     // calculate the 'magnitude' of both the audio and visuals
     const [origSize, scaledSize] = calculateSize(recentChange.value.data);
-
+    const x = Math.random() * (width - scaledSize) + scaledSize;
+    const y = Math.random() * (height - scaledSize) + scaledSize;
     if (data.event_type === 'new_user') {
       playRandomSwell();
       new_user_action(data, svg)
     } else {
       // play audio
+      const pan = x * 2 / width - 1;
       if (origSize > 0) {
-        playSound(scaledSize, 'add')
+        playSound(scaledSize, 'add', pan)
       } else {
-        playSound(scaledSize, 'sub')
+        playSound(scaledSize, 'sub', pan)
       }
     }
 
@@ -169,8 +171,6 @@ onMounted(() => {
 
     const circle_id = "d" + ((Math.random() * 100000) | 0);
 
-    const x = Math.random() * (width - scaledSize) + scaledSize;
-    const y = Math.random() * (height - scaledSize) + scaledSize;
 
     let circle_color = isAddingContent ? grow_color : shrink_color;
     if (data.event_type === 'new_user') circle_color = new_user_color;

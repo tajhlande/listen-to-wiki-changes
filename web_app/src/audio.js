@@ -49,7 +49,8 @@ export function loadSounds() {
     }
 }
 
-export function playSound(size, type) {
+export function playSound(size, type, pan = 0) {
+    // pan : (L) -1 <= pan <= 1 (R)
     const max_pitch = 100.0;
     const log_used = 1.0715307808111486871978099;
     const pitch = 100 - Math.min(max_pitch, Math.log(size + log_used) / Math.log(log_used));
@@ -60,9 +61,9 @@ export function playSound(size, type) {
     index = Math.max(1, index);
 
     if (type == 'add') {
-        celesta[index].play();
+        celesta[index].stereo(pan).play();
     } else {
-        clav[index].play();
+        clav[index].stereo(pan).play();
     }
 }
 
