@@ -1,9 +1,12 @@
 <script setup>
-import {onMounted} from "vue";
+import { onMounted, ref, reactive } from "vue";
 
 import noUiSlider from 'nouislider';
 import 'nouislider/dist/nouislider.css';
 import Howler from "howler";
+import SvgIcon from "@jamescoyle/vue-icon";
+import { mdiVolumeHigh, mdiVolumeMute } from '@mdi/js';
+import {globalSettings} from "../global_settings.js";
 
 const DEFAULT_VOLUME = 70;
 
@@ -14,8 +17,12 @@ function communicateVolumeChange(val) {
 }
 
 function setVolume(volumeNumber) {
-  Howler.Howler.volume(volumeNumber / 100);
+  globalSettings.volume = volumeNumber;
+  Howler.Howler.volume(globalSettings.mute ? 0 : volumeNumber / 100);
 }
+
+const volumeLabel = ref(null);
+const volumeIcon = ref(mdiVolumeHigh);
 
 onMounted(() => {
   const volumeSlider = document.getElementById('volume-slider');
@@ -40,11 +47,19 @@ onMounted(() => {
   volumeSlider.noUiSlider.on('update', (value) => { setVolume(value) });
 })
 
+function volumeLabelClicked() {
+  globalSettings.mute = ! globalSettings.mute;
+  volumeIcon.value = globalSettings.mute ? mdiVolumeMute : mdiVolumeHigh;
+  setVolume(globalSettings.volume);
+}
+
 </script>
 
 <template>
   <div id="volume-settings">
-    <label id="volume-label" for="volume-slider">Volume</label>
+    <label id="volume-label" ref="volumeLabel" for="volume-slider" @click="volumeLabelClicked()">
+      <svg-icon class="volume_icon" type="mdi" :path="volumeIcon" size="30"></svg-icon>
+    </label>
     <div id="volume-slider" aria-labelledby="volume-label"></div>
   </div>
 </template>
@@ -54,8 +69,9 @@ onMounted(() => {
 #volume-settings {
   display: flex;
   align-items: center;
+  vertical-align: center;
   justify-content: space-between;
-  margin-top: 4px;
+  margin-top: 0px;
 }
 
 #volume-label {
@@ -67,8 +83,11 @@ onMounted(() => {
   display: flex;
   width: 100px;
   margin-left: 5px;
-  margin-right: 40px;
+  margin-right: 5px;
 }
 
+.volume_icon {
+  margin-top: 4px;
+}
 
 </style>

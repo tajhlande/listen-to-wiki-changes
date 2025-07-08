@@ -16,6 +16,7 @@ import Header from './components/Header.vue'
           <cdx-progress-bar />
         </template>
         <div>
+          <div id="header_spacer"></div>
           <AudioVisualizer></AudioVisualizer>
           <RecentChangesLog></RecentChangesLog>
           <LanguagesSelector></LanguagesSelector>
@@ -25,3 +26,9 @@ import Header from './components/Header.vue'
     </main>
   </body>
 </template>
+
+<style>
+#header_spacer {
+  padding-top: 48px;
+}
+</style>

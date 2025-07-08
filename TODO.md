@@ -14,8 +14,6 @@
 * add toggles to hide: 
   * article titles
   * new user announcements
-  * recent changes console
-  * graphics for background listening
 * add ability to filter for edits with a hashtag in the edit summary
 * link to diffs instead of pages
 * consider identifying unregistered users (or temp accounts)

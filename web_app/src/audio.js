@@ -49,17 +49,25 @@ export function loadSounds() {
     }
 }
 
-export function playSound(size, type, pan = 0) {
+export function playSound(size, type, pan = 0, calcPanFromPitch = false) {
     // pan : (L) -1 <= pan <= 1 (R)
     const max_pitch = 100.0;
     const log_used = 1.0715307808111486871978099;
     const pitch = 100 - Math.min(max_pitch, Math.log(size + log_used) / Math.log(log_used));
-    let index = Math.floor(pitch / 100.0 * Object.keys(celesta).length);
+    const arrayLength = Object.keys(celesta).length;
+    let index = Math.floor(pitch / 100.0 * arrayLength);
     const fuzz = Math.floor(Math.random() * 4) - 2;
     index += fuzz;
-    index = Math.min(Object.keys(celesta).length - 1, index);
+    index = Math.min(arrayLength - 1, index);
     index = Math.max(1, index);
+    if (calcPanFromPitch) {
+        console.debug("Calculating pan from pitch");
+        pan = index * 2 / arrayLength - 1 ;
+    } else {
+        console.debug("Pitch pre-calculated");
+    }
 
+    console.debug("Size: " + Math.round(size) + ", index : " + index + ", Pan: " + pan + ", array length: " + arrayLength);
     if (type == 'add') {
         celesta[index].stereo(pan).play();
     } else {

@@ -1,6 +1,7 @@
 <script setup>
 import { ref, watch } from "vue";
 import {getWikiCodes, useRecentChange} from "../composition.js";
+import {globalSettings} from "../global_settings.js";
 
 const { recentChange } = useRecentChange();
 const listenCounter = ref(0);
@@ -41,35 +42,37 @@ function lengthChangeClass(lengthChange) {
 </script>
 
 <template>
-  <div id="recent-changes-log" class="anchor-target">
-    <div id="log">
-      <TransitionGroup name="list" tag="ul">
-        <li v-for="change in recentChanges" :key="change.id ?? change.log_id">
-          <span v-if="change.event_type === 'edit'">
-            {{ change.bot ? '&#129302;' : '' }}
-            {{ `${change.user}` }} edited
-            <a target="_blank" :href="change.title_url" :title="change.title">{{change.title}}</a>
-            on {{ wikiCodeMap.get(change.code).displayName }}
-            <span :class="lengthChangeClass(change.change_in_length)"> ({{ lengthChangeToText(change.change_in_length)}})</span>
-          </span>
-          <span v-if="change.event_type === 'new_page'" style="font-weight: bold">
-            {{ change.bot ? '&#129302;' : '' }}
-            {{ `${change.user}` }} created page
-            <a target="_blank" :href="change.title_url" :title="change.title">{{change.title}}</a>
-            on {{ wikiCodeMap.get(change.code).displayName }}
-            <span :class="lengthChangeClass(change.change_in_length)"> ({{ lengthChangeToText(change.change_in_length)}})</span>
-          </span>
-          <span v-if="change.event_type === 'new_user'" style="font-weight: bolder">
-            Welcome
-            <a target="_blank" :href="change.title_url" :title="change.title">{{ `${change.user}` }}</a>
-            to {{ wikiCodeMap.get(change.code).displayName }}!
-          </span>
-        </li>
-      </TransitionGroup>
-    </div>
-    <div style="margin-bottom: 1rem; text-align: center">
-      You have listened to a total of
-      <span id="edit-counter"> {{ listenCounter }} changes</span>.
+  <div v-show="globalSettings.showChangeLog">
+    <div id="recent-changes-log" class="anchor-target">
+      <div id="log">
+        <TransitionGroup name="list" tag="ul">
+          <li v-for="change in recentChanges" :key="change.id ?? change.log_id">
+            <span v-if="change.event_type === 'edit'">
+              {{ change.bot ? '&#129302;' : '' }}
+              {{ `${change.user}` }} edited
+              <a target="_blank" :href="change.title_url" :title="change.title">{{change.title}}</a>
+              on {{ wikiCodeMap.get(change.code).displayName }}
+              <span :class="lengthChangeClass(change.change_in_length)"> ({{ lengthChangeToText(change.change_in_length)}})</span>
+            </span>
+            <span v-if="change.event_type === 'new_page'" style="font-weight: bold">
+              {{ change.bot ? '&#129302;' : '' }}
+              {{ `${change.user}` }} created page
+              <a target="_blank" :href="change.title_url" :title="change.title">{{change.title}}</a>
+              on {{ wikiCodeMap.get(change.code).displayName }}
+              <span :class="lengthChangeClass(change.change_in_length)"> ({{ lengthChangeToText(change.change_in_length)}})</span>
+            </span>
+            <span v-if="change.event_type === 'new_user'" style="font-weight: bolder">
+              Welcome
+              <a target="_blank" :href="change.title_url" :title="change.title">{{ `${change.user}` }}</a>
+              to {{ wikiCodeMap.get(change.code).displayName }}!
+            </span>
+          </li>
+        </TransitionGroup>
+      </div>
+      <div style="margin-bottom: 1rem; text-align: center">
+        You have listened to a total of
+        <span id="edit-counter"> {{ listenCounter }} changes</span>.
+      </div>
     </div>
   </div>
 </template>

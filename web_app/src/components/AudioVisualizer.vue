@@ -4,6 +4,7 @@ import * as d3 from "d3";
 import {getWikiCodes, useRecentChange} from "../composition.js";
 import { FixedLengthQueue, calc_rate_in_epm } from "../rate_measure.js";
 import {loadSounds, calculateSize, playSound, playRandomSwell} from "../audio.js";
+import {globalSettings, SPATIAL_POSITION, SPATIAL_PITCH} from "../global_settings.js";
 
 loadSounds();
 
@@ -112,7 +113,6 @@ function update_epm_display(epm, svg_area) {
   }
 }
 
-
 onMounted(() => {
   let svg = d3
     .select("#area")
@@ -150,11 +150,20 @@ onMounted(() => {
       new_user_action(data, svg)
     } else {
       // play audio
-      const pan = x * 2 / width - 1;
+      let pan = 0; // mono by default
+      let calcPanFromPitch = false
+      if (globalSettings.spatialAudio === SPATIAL_POSITION) {
+        console.log("Calculating pan from position");
+        pan = x * 2 / width - 1;
+      } else if (globalSettings.spatialAudio === SPATIAL_PITCH) {
+        console.log("Setting flag to calculate pan from pitch");
+        calcPanFromPitch = true;
+      }
+
       if (origSize > 0) {
-        playSound(scaledSize, 'add', pan)
+        playSound(scaledSize, 'add', pan, calcPanFromPitch)
       } else {
-        playSound(scaledSize, 'sub', pan)
+        playSound(scaledSize, 'sub', pan, calcPanFromPitch)
       }
     }
 
@@ -236,13 +245,12 @@ onMounted(() => {
 </script>
 
 <template>
-  <div id="area" class="anchor-target"></div>
+  <div v-show="globalSettings.showVisualizer">
+    <div id="area" class="anchor-target"></div>
+  </div>
 </template>
-<style>
 
-#area {
-  padding-top: 48px;
-}
+<style>
 
 .article-label {
   opacity: 0;
