@@ -93,6 +93,10 @@ Become the tool:
 
     become listen-to-wiki-changes
 
+Stop the webservice, if it is already running :
+
+    toolforge webservice buildservice stop
+
 Build the tool:
 
     toolforge build start https://gitlab.wikimedia.org/toolforge-repos/listen-to-wiki-changes
@@ -105,4 +109,6 @@ Start the service:
 
     toolforge webservice buildservice start --mount=none  --health-check-path /api/health_check
 
+Stop the webservice:
 
+    toolforge webservice buildservice stop
