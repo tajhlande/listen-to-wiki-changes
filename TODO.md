@@ -5,7 +5,6 @@
 * check color scheme for color deficiency legibility
 
 ## bugs
-* make mobile responsive
 * when window/tab doesn't have focus or is not visible, circles are created but not deleted, leading to lag
   * this appears to be the designed behavior for d3, per comments by Mike Bostock on filed issues
   * next best option is to stop creating circles when the window/tab is not visible, with the same logic as d3
