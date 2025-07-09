@@ -131,17 +131,6 @@ const typesSearchResults = computed(() => {
   return typesSearchData.value;
 });
 
-onMounted(() => {
-  console.log("Adding event listener for start-listening");
-  window.addEventListener('start-listening', (event) => {
-    // Handle the event
-    console.log('Received event to start listening');
-    enWikiCode.checked = true;
-    deWikiCode.checked = true;
-    zhWikiCode.checked = true;
-  });
-});
-
 function clearAllSelections() {
   console.log("Clearing all selections");
   for (let wikiCode of wikiCodes) { if (wikiCode.checked) wikiCode.checked = false; }
@@ -149,6 +138,24 @@ function clearAllSelections() {
   for (let wikiType of wikiTypes) { if (wikiType.checked) wikiType.checked = false; }
 
 }
+
+onMounted(() => {
+  console.debug("Adding event listener for start-listening");
+  window.addEventListener('start-listening', (event) => {
+    // Handle the event
+    console.debug('Received event to start listening');
+    enWikiCode.checked = true;
+    deWikiCode.checked = true;
+    zhWikiCode.checked = true;
+  });
+  console.debug("Adding event listener for stop-listening");
+  window.addEventListener('stop-listening', (event) => {
+    // Handle the event
+    console.debug('Received event to stop listening');
+    clearAllSelections();
+  });
+});
+
 
 </script>
 
@@ -222,5 +229,13 @@ function clearAllSelections() {
   height: fit-content;
   justify-content: flex-end;
   margin: 0.25em;
+}
+
+/* Mobile responsive changes */
+@media (max-width: 1024px) {
+  #clear-all-button {
+    display: none;
+  }
+
 }
 </style>
