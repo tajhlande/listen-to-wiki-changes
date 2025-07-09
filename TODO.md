@@ -22,6 +22,7 @@
 * cap amount of currently playing sounds
 
 ## enhancements
+* Change "start" and "stop" buttons to boolean state and leave selector checkboxes unchanged
 * give bot edits a different fill pattern
 * show total counts for wikis, languages, and types on tab labels
 * i18n for UI text
