@@ -61,14 +61,14 @@ export function playSound(size, type, pan = 0, calcPanFromPitch = false) {
     index = Math.min(arrayLength - 1, index);
     index = Math.max(1, index);
     if (calcPanFromPitch) {
-        console.debug("Calculating pan from pitch");
+        // console.debug("Calculating pan from pitch");
         pan = index * 2 / arrayLength - 1 ;
-    } else {
-        console.debug("Pitch pre-calculated");
+    // } else {
+    //     console.debug("Pitch pre-calculated");
     }
 
-    console.debug("Size: " + Math.round(size) + ", index : " + index + ", Pan: " + pan + ", array length: " + arrayLength);
-    if (type == 'add') {
+    // console.debug("Size: " + Math.round(size) + ", index : " + index + ", Pan: " + pan + ", array length: " + arrayLength);
+    if (type === 'add') {
         celesta[index].stereo(pan).play();
     } else {
         clav[index].stereo(pan).play();

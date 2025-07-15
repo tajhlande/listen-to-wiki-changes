@@ -30,6 +30,7 @@
   * [three.js](https://threejs.org/)
   * [d3fc](https://github.com/d3fc/d3fc) 
   * [regl](https://regl-project.github.io/regl/)
+  * plain old [canvas](https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D)
 
 ## blocked ideas
 * see if reverts are specifically tagged, so they could get a distinct look

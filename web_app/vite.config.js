@@ -11,5 +11,8 @@ export default defineConfig({
     emptyOutDir: true,
   },
   base: '/app', // create relative paths when rendering
-
+  server: {
+    // for local viewing and debugging from phone
+    allowedHosts: true,
+  }
 })

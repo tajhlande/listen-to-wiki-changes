@@ -4,14 +4,14 @@
   "version": "0.2.0",
   "type": "module",
   "scripts": {
-    "dev": "vite --config web_app/vite.config.js",
+    "dev": "vite --config web_app/vite.config.js --host 0.0.0.0",
     "build": "vite build --config web_app/vite.config.js",
     "preview": "vite preview --config web_app/vite.config.js"
   },
   "dependencies": {
     "@jamescoyle/vue-icon": "^0.1.2",
     "@mdi/js": "^7.4.47",
-    "d3": "^7.8.2",
+    "color-alpha": "^2.0.0",
     "howler": "^2.2.3",
     "nouislider": "^15.8.1",
     "vue": "^3.2.45"

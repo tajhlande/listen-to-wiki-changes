@@ -1,274 +1,367 @@
-<script setup>
-import { onMounted, watch } from "vue";
-import * as d3 from "d3";
-import {getWikiCodes, useRecentChange} from "../composition.js";
-import { FixedLengthQueue, calc_rate_in_epm } from "../rate_measure.js";
-import {loadSounds, calculateSize, playSound, playRandomSwell} from "../audio.js";
-import {globalSettings, SPATIAL_POSITION, SPATIAL_PITCH} from "../global_settings.js";
+<template>
+  <div ref="canvasContainer" id="area" />
+</template>
 
-loadSounds();
+<script setup>
+import { onMounted, onBeforeUnmount, reactive, ref, watch } from 'vue';
+import { getWikiCodes, useRecentChange } from '../composition.js';
+import { FixedLengthQueue, calc_rate_in_epm } from '../rate_measure.js';
+import { loadSounds, calculateSize, playSound, playRandomSwell } from '../audio.js';
+import { globalSettings, SPATIAL_POSITION, SPATIAL_PITCH } from '../global_settings.js';
+import adjustAlpha from 'color-alpha';
 
 const { recentChange } = useRecentChange();
 
-const width = 1000;
-const height = 600;
-// TODO: Move these options out of this file
-const max_life = 60000,
-  DEFAULT_LANG = "en";
 
-const body_background_color = "#f8f8f8",
-  body_text_color = "#000",
-  svg_background_color = "#1c2733",
-  svg_text_color = "#fff",
-  newuser_box_color = "rgb(41, 128, 185)",
-  bot_color = "rgb(155, 89, 182)",
-  anon_color = "rgb(46, 204, 113)",
-  grow_color = "#2686cf", //"rgb(38, 134, 207)", // rgb(0, 144, 255)
-  shrink_color = "#de9332" ,  //"rgb(222, 147, 50)", // "rgb(255, 144, 0)",
-  new_user_color = "rgb(205, 40, 214)",
-  new_page_color = "rgb(145, 212, 29)",
-  circle_middle_color = "rgba(255, 255, 255, 0.5)",
-  sound_totals = 51,
-  total_edits = 0;
+// Colors and styles
+const svg_background_color = '#1c2733';
+const NEW_USER_BOX_COLOR = 'rgb(41, 128, 185)';
+const new_user_color = 'rgb(205, 40, 214)';
+const NEW_PAGE_COLOR = 'rgb(145, 212, 29)';
+const TEXT_OUTLINE_COLOR = 'rgb(28, 39, 51)';
+const TEXT_FILL_COLOR = 'rgb(255, 255, 255)';
+const GROW_COLOR = '#2686cf';
+const SHRINK_COLOR = '#de9332';
 
-let silent = false;
+const CANVAS_DEFAULT_WIDTH = 1000;
+const CANVAS_DEFAULT_HEIGHT = 600;
 
-const wikiCodeMap  = new Map(getWikiCodes().map(item => [item.wikiCode, item]));
-
+const CIRCLE_MAX_AGE = 60000;
+const RING_MAX_AGE = 2500;
+const TEXT_MAX_AGE = 3000;
+const FLASH_MAX_AGE = 1000;
+const NEW_USER_FADE_DELAY = 4000;
+const NEW_USER_FADE_TIME = 3000;
+const DEFAULT_ALPHA = 0.8;
+const SILENT_ALPHA = 0.2;
+const ARTICLE_TITLE_FONT_SIZE = 20;
+const ARTICLE_TITLE_Y_ADJUST = 7;
 const MAX_RATE_QUEUE_SIZE = 30;
-const MAX_EVENT_AGE_FOR_RATE = 10 * 1000; // in milliseconds
-const UPDATE_RATE_EVERY = 3 * 1000; // in milliseconds
+const MAX_EVENT_AGE_FOR_RATE = 10 * 1000;
+const UPDATE_RATE_EVERY = 3 * 1000;
 const rateMeasureQueue = new FixedLengthQueue(MAX_RATE_QUEUE_SIZE);
-let eventsPerMinute = 0.0;
-let epm_text = false;
-let overlay_group = {};
-let circles_container = {};
-let epm_container = {};
 
-function new_user_action(data, svg_area) {
-  let wikiName = wikiCodeMap.get(data.code).displayName;
-  let messages = ['Welcome ' + data.user + ', ' + wikiName + '\'s newest user!',
-                  wikiName + ' has a new user, ' + data.user + '! Welcome!',
-                  'Welcome, ' + data.user + ' has joined ' + wikiName + '!'];
-  let message = Math.round(Math.random() * (messages.length - 1));
+const wikiCodeMap = new Map(getWikiCodes().map(item => [item.wikiCode, item]));
 
-  let user_group = svg_area.append('g');
+const drawables = reactive([]);
 
-  let user_container = user_group.append('a')
-      .attr('xlink:href', data.title_url)
-      .attr('target', '_blank');
+let canvasWidth = CANVAS_DEFAULT_WIDTH;
+let canvasHeight = CANVAS_DEFAULT_HEIGHT;
+const canvasRatio = canvasWidth/canvasHeight;
+const canvasRef = ref(null);
+let ctx;
 
-  user_group.transition()
-      .delay(7000)
-      .remove();
+let animationFrameId;
+let lastRender = performance.now();
+let epmDisplay = '';
+let lastRateUpdate = 0;
+let silent = false; // TODO update when volume or mute are changed
 
-  user_container.transition()
-      .delay(4000)
-      .style('opacity', 0)
-      .duration(3000);
 
-  user_container.append('rect')
-      .attr('opacity', 0)
-      .transition()
-      .delay(100)
-      .duration(3000)
-      .attr('opacity', 1)
-      .attr('fill', newuser_box_color)
-      .attr('width', width)
-      .attr('height', 35);
-
-  let y = width / 2;
-
-  user_container.append('text')
-      .classed('newuser-label', true)
-      .attr('transform', 'translate(' + y +', 25)')
-      .transition()
-      .delay(1500)
-      .duration(1000)
-      .text(messages[message])
-      .attr('text-anchor', 'middle');
-
+function drawRankItems( a, b ) {
+  if (a.z < b.z) {return -1;} else if (a.z > b.z) {return 1;}
+  if (a.timestamp < b.timestamp) {return -1;} else if (a.timestamp > b.timestamp) {return 1;}
+  return 0;
 }
+function drawScene() {
+  const now = performance.now();
+  const delta = now - lastRender;
+  lastRender = now;
 
-function update_epm_display(epm, svg_area) {
-  if (!epm_text) {
-    epm_container = svg_area.append('g')
-        .attr('transform', 'translate(0, ' + (height - 25) + ')');
+  ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+  ctx.fillStyle = svg_background_color;
+  ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
-    var epm_box = epm_container.append('rect')
-        .attr('fill', newuser_box_color)
-        .attr('opacity', 0.5)
-        .attr('width', 140)
-        .attr('height', 25);
+  const currentTime = Date.now();
 
-    epm_text = epm_container.append('text')
-        .classed('newuser-label', true)
-        .attr('transform', 'translate(5, 18)')
-        .attr('opacity', 1)
-        .style('font-size', '.8em')
-        .text(epm + ' events per minute');
+  // Cleanup old drawables
+  drawables.splice(0, drawables.length, ...drawables.filter((item) => currentTime - item.timestamp < item.maxAge));
+  // console.debug(drawables.length + " items to draw");
+  drawables.sort(drawRankItems);
 
-  } else if (epm_text.text) {
-    epm_text.text(epm + ' events per minute');
-  }
-}
+  for (const item of drawables) {
+    const age = currentTime - item.timestamp;
 
-onMounted(() => {
-  let svg = d3
-    .select("#area")
-    .append("svg")
-    .attr("preserveAspectRatio", "xMinYMin meet")
-    .attr("viewBox", `0 0 ${width} ${height}`)
-    .classed("svg-content", true)
-    .style("background-color", "#1c2733");
-  circles_container = svg.append('g');
-  overlay_group = svg.append('g');
+    if (item.type === 'circle') {
+      const transformedItem = item.transform(item, age);
+      ctx.beginPath();
+      ctx.fillStyle = adjustAlpha(transformedItem.color, transformedItem.alpha);
+      ctx.arc(transformedItem.x, transformedItem.y, transformedItem.r, 0, 2 * Math.PI);
+      ctx.fill();
+    } else if (item.type === 'ring') {
+      const transformedItem = item.transform(item, age);
+      ctx.beginPath();
+      ctx.fillStyle = adjustAlpha(transformedItem.color, transformedItem.alpha);
+      ctx.arc(transformedItem.x, transformedItem.y, transformedItem.rOuter, 0, 2 * Math.PI);
+      ctx.closePath();
+      ctx.arc(transformedItem.x, transformedItem.y, transformedItem.rInner, 0, 2 * Math.PI, 1 /* counterclockwise */);
+      ctx.closePath();
+      ctx.fill();
+    } else if (item.type === 'text') {
+      const transformedItem = item.transform(item, age);
+      const textFontSize = ARTICLE_TITLE_FONT_SIZE;
+      const textFontYAdjust = ARTICLE_TITLE_Y_ADJUST;
+      ctx.font = textFontSize + 'px sans-serif';
+      ctx.textAlign = 'center';
 
-  // update the events per minute measurement once per every
-  let rateMeasureInterval = setInterval(() =>{
-      let currentTime = Date.now();
-      // console.debug('Queue length (' + rateMeasureQueue.size + ') and max age in s (' +
-      //     (rateMeasureQueue.isEmpty() ? 'undefined' :
-      //         (currentTime - (rateMeasureQueue.peek()))/1000) + ') for calc:')
-      eventsPerMinute = calc_rate_in_epm(rateMeasureQueue, currentTime, MAX_EVENT_AGE_FOR_RATE);
-      // console.debug('Events per minute: ' + eventsPerMinute)
-      update_epm_display(eventsPerMinute, overlay_group)
-    },UPDATE_RATE_EVERY);
+      // black outline
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = adjustAlpha(transformedItem.outlineColor, transformedItem.outlineAlpha);
+      ctx.strokeText(transformedItem.text, transformedItem.x, transformedItem.y + textFontYAdjust);
 
-  watch(recentChange, () => {
-    const data = recentChange.value.data;
-    // console.log(data)
-
-    const isAddingContent = data.change_in_length > 0;
-
-    // calculate the 'magnitude' of both the audio and visuals
-    const [origSize, scaledSize] = calculateSize(recentChange.value.data);
-    const x = Math.random() * (width - scaledSize) + scaledSize;
-    const y = Math.random() * (height - scaledSize) + scaledSize;
-    if (data.event_type === 'new_user') {
-      playRandomSwell();
-      new_user_action(data, svg)
+      // white fill
+      ctx.fillStyle = adjustAlpha(transformedItem.fillColor, transformedItem.fillAlpha);
+      ctx.fillText(transformedItem.text, transformedItem.x, transformedItem.y + textFontYAdjust);
+    } else if (item.type === 'rectangle') {
+      const transformedItem = item.transform(item, age);
+      // console.debug(`Drawing rectangle: color ${transformedItem.fillColor}, alpha ${transformedItem.alpha}, ` +
+      //     `(x, y): (${transformedItem.x}, ${transformedItem.y}), ` +
+      //     `(width, height): (${transformedItem.width}, ${transformedItem.height})`);
+      ctx.fillStyle = adjustAlpha(transformedItem.fillColor, transformedItem.alpha);
+      ctx.fillRect(transformedItem.x, transformedItem.y, transformedItem.width, transformedItem.height);
     } else {
-      // play audio
-      let pan = 0; // mono by default
-      let calcPanFromPitch = false
-      if (globalSettings.spatialAudio === SPATIAL_POSITION) {
-        console.log("Calculating pan from position");
-        pan = x * 2 / width - 1;
-      } else if (globalSettings.spatialAudio === SPATIAL_PITCH) {
-        console.log("Setting flag to calculate pan from pitch");
-        calcPanFromPitch = true;
-      }
-
-      if (origSize > 0) {
-        playSound(scaledSize, 'add', pan, calcPanFromPitch)
-      } else {
-        playSound(scaledSize, 'sub', pan, calcPanFromPitch)
-      }
+      console.warn(`Unrecognized item type ${item.type}. Item: ${JSON.stringify(item)}`);
     }
 
-    // track the new event for rate measurement
-    let currentTimestamp = Date.now();
-    // console.debug('Enqueueing timestamp: ' + currentTimestamp);
-    rateMeasureQueue.enqueue(currentTimestamp);
+  }
 
-    // draw circle
-    let label_text = data.title;
-    let no_label = true;
-    let type = data.event_type;
-    let starting_opacity = silent ? 0.2 : 0.8;
+  // Draw EPM display
+  ctx.font = '16px sans-serif';
+  ctx.textAlign = 'left';
+  ctx.strokeStyle = '#000000';
+  ctx.lineWidth = 3;
+  ctx.strokeText(epmDisplay, 10, canvasHeight - 10);
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText(epmDisplay, 10, canvasHeight - 10);
+}
 
-    const circle_id = "d" + ((Math.random() * 100000) | 0);
+function loop() {
+  const now = Date.now();
+  if (now - lastRateUpdate > UPDATE_RATE_EVERY) {
+    const epm = calc_rate_in_epm(rateMeasureQueue, now, MAX_EVENT_AGE_FOR_RATE);
+    epmDisplay = `${epm} events per minute`;
+    lastRateUpdate = now;
+  }
 
+  drawScene();
+  animationFrameId = requestAnimationFrame(loop);
+}
 
-    let circle_color = isAddingContent ? grow_color : shrink_color;
-    if (data.event_type === 'new_user') circle_color = new_user_color;
-    if (data.event_type === 'new_page') circle_color = new_page_color
+// 0 <= x <= 1
+function easeOutQuad(x) {
+  return 1 - (1 - x) * (1 - x);
+}
 
-    const circle_group = circles_container
-      .append("g")
-      .attr("transform", "translate(" + x + ", " + y + ")")
-      .attr("fill", circle_middle_color)
-      .style("opacity", starting_opacity);
+function handleRecentChange(change) {
+  const timestamp = Date.now();
+  const x = Math.random() * canvasWidth;
+  const y = Math.random() * canvasHeight;
+  const [origSize, scaledSize] = calculateSize(change.data);
+  // console.debug("Orig size: " + origSize + ", scaledSize: " + scaledSize);
+  const color = change.data.event_type === 'new_page' ? NEW_PAGE_COLOR : (change.data.change_in_length > 0 ? GROW_COLOR : SHRINK_COLOR);
 
-    const ring = circle_group
-      .append("circle")
-      .attr("r", scaledSize + 20)
-      .attr("stroke", "none")
-      .transition()
-      .attr("r", scaledSize + 40)
-      .style("opacity", 0)
-      .ease(Math.sqrt)
-      .duration(2500)
-      .remove();
+  // play the appropriate sound
+  if (change.data.event_type === 'new_user') {
+    playRandomSwell();
+    //new_user_action(data, svg)
+  } else {
+    // play audio
+    let pan = 0; // mono by default
+    let calcPanFromPitch = false
+    if (globalSettings.spatialAudio === SPATIAL_POSITION) {
+      //console.log("Calculating pan from position");
+      pan = x * 2 / canvasWidth - 1;
+    } else if (globalSettings.spatialAudio === SPATIAL_PITCH) {
+      //console.log("Setting flag to calculate pan from pitch");
+      calcPanFromPitch = true;
+    }
 
-    const circle_container = circle_group
-      .append("a")
-      .attr("xlink:href", data.title_url)
-      .attr("target", "_blank")
-      .attr("fill", svg_text_color);
+    if (origSize > 0) {
+      playSound(scaledSize, 'add', pan, calcPanFromPitch)
+    } else {
+      playSound(scaledSize, 'sub', pan, calcPanFromPitch)
+    }
+  }
 
-    const circle = circle_container
-      .append("circle")
-      .classed("visualizer-circle", true)
-      .classed(type, true)
-      .attr("r", scaledSize)
-      .transition()
-      .duration(max_life)
-      .attr("fill", circle_color)
-      .style("opacity", 0)
-        .attr("opacity", 0)
-      .on("end", function () {
-        circle_group.remove();
+  // set up the drawables
+  if (change.data.event_type === 'new_user') {
+    const wikiName = wikiCodeMap.get(change.data.code).displayName;
+    const messages = ['Welcome ' + change.data.user + ', ' + wikiName + '\'s newest user!',
+      wikiName + ' has a new user, ' + change.data.user + '! Welcome!',
+      'Welcome, ' + change.data.user + ' has joined ' + wikiName + '!'];
+    const messageIndex = Math.round(Math.random() * (messages.length - 1));
+    const message = messages[messageIndex];
+
+    drawables.push({
+      type: 'rectangle',
+      x: 0,
+      y: 0,
+      z: 100,
+      width: canvasWidth,
+      height: 50,
+      fillColor: NEW_USER_BOX_COLOR,
+      alpha: 1.0,
+      timestamp,
+      maxAge: NEW_USER_FADE_DELAY + NEW_USER_FADE_TIME,
+      transform: (item, age) => ({
+        ...item,
+        alpha: age < 100 ? item.alpha * age / 100 :
+            age < NEW_USER_FADE_DELAY ? item.alpha :
+                (1 - (age - NEW_USER_FADE_DELAY) / NEW_USER_FADE_TIME) * item.alpha
       })
-      .remove();
+    });
+    drawables.push({
+      type: 'text',
+      x: canvasWidth / 2,
+      y: 25,
+      z: 100,
+      text: message,
+      timestamp,
+      maxAge: NEW_USER_FADE_DELAY + NEW_USER_FADE_TIME,
+      fillColor: TEXT_FILL_COLOR,
+      outlineColor: TEXT_OUTLINE_COLOR,
+      fillAlpha: 1.0,
+      outlineAlpha: 0.0,
+      transform: (item, age) => ({
+        ...item,
+        y: age < 100 ? item.y * age / 100 : item.y,
+        fillAlpha: age < 100 ? item.fillAlpha * age / 100 :
+            age < NEW_USER_FADE_DELAY ? item.fillAlpha :
+                (1 - (age - NEW_USER_FADE_DELAY) / NEW_USER_FADE_TIME) * item.fillAlpha
+      })
+    });
+  } else {
+    //console.debug("adding to drawables with color: " + color);
 
-    circle_container
-      .append("text")
-      .text(label_text)
-      .classed("article-label", true)
-      .attr("text-anchor", "middle");
+    drawables.push({
+      // colored circle
+      type: 'circle',
+      x, y,
+      z: 50,
+      r: scaledSize,
+      timestamp,
+      maxAge: CIRCLE_MAX_AGE,
+      color,
+      alpha: silent ? SILENT_ALPHA : DEFAULT_ALPHA,
+      transform: (item, age) => ({
+        ...item,
+        alpha: Math.sqrt((1 - age / item.maxAge) * item.alpha),
+      })
+    });
+    drawables.push({
+      // outer ring
+      type: 'ring',
+      x, y,
+      z: 50,
+      rInner: scaledSize,
+      rOuter: scaledSize + 20,
+      timestamp,
+      maxAge: RING_MAX_AGE,
+      color: 'white',
+      alpha: silent ? SILENT_ALPHA : 0.5,
+      transform: (item, age) => ({
+        ...item,
+        alpha: easeOutQuad((1 - age / item.maxAge) * item.alpha),
+        rOuter: item.rOuter + 20 * easeOutQuad(age / RING_MAX_AGE)
+      })
+    });
+    drawables.push({
+      // white circle flash overlay
+      type: 'circle',
+      x, y,
+      z: 50,
+      r: scaledSize,
+      timestamp,
+      maxAge: FLASH_MAX_AGE,
+      color: 'white',
+      alpha: 0.5,
+      transform: (item, age) => ({
+        ...item,
+        alpha: Math.sqrt((1 - age / item.maxAge) * item.alpha),
+      })
+    });
+    drawables.push({
+      // article title
+      type: 'text',
+      x, y,
+      z: 50,
+      timestamp,
+      maxAge: TEXT_MAX_AGE,
+      fillColor: TEXT_FILL_COLOR,
+      outlineColor: TEXT_OUTLINE_COLOR,
+      fillAlpha: silent ? SILENT_ALPHA : DEFAULT_ALPHA,
+      outlineAlpha:  silent ? SILENT_ALPHA : DEFAULT_ALPHA,
+      text: change.data.title,
+      transform: (item, age) => ({
+        ...item,
+        fillAlpha: Math.sqrt((1 - age / item.maxAge) * item.fillAlpha),
+        outlineAlpha: Math.sqrt((1 - age / item.maxAge) * item.outlineAlpha)
+      })
+    });
 
-    circle_container.append('text')
-        .text(label_text)
-        .classed('article-label', true)
-        .attr('text-anchor', 'middle')
-        .style('opacity', 1)
-        .transition()
-        .delay(1000)
-        .style('opacity', 0)
-        .duration(2000)
-        //.each('end', function() { no_label = true; })
-        .remove();
+  }
+  rateMeasureQueue.enqueue(timestamp);
+
+
+}
+
+let resizeCanvasFn = null;
+
+onMounted(() => {
+  loadSounds();
+
+  const canvas = document.createElement('canvas');
+  canvasRef.value = canvas;
+  document.getElementById('area').appendChild(canvas);
+  ctx = canvas.getContext('2d');
+
+  function resizeCanvas() {
+    const container = canvas.parentElement;
+    const rect = container.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+
+    // Update width/height globals
+    canvasWidth = rect.width;
+    canvasHeight = canvasWidth / canvasRatio;
+
+    // Resize canvas internal buffer
+    canvas.width = canvasWidth * dpr;
+    canvas.height = canvasHeight * dpr;
+
+    // Style it to fill the container
+    canvas.style.width = `${canvasWidth}px`;
+    canvas.style.height = `${canvasHeight}px`;
+
+    // Scale the drawing context
+    ctx.setTransform(1, 0, 0, 1, 0, 0); // reset any prior scaling
+    ctx.scale(dpr, dpr);
+  }
+
+  resizeCanvasFn = resizeCanvas;
+
+  // Initial resize
+  resizeCanvas();
+  window.addEventListener('resize', resizeCanvas);
+
+  // Setup event handling
+  watch(recentChange, (change) => {
+    if (change) {
+      handleRecentChange(change);
+    }
   });
+
+  loop();
+});
+
+
+onBeforeUnmount(() => {
+  cancelAnimationFrame(animationFrameId);
+  window.removeEventListener('resize', resizeCanvasFn);
 });
 </script>
 
-<template>
-  <div v-show="globalSettings.showVisualizer">
-    <div id="area" class="anchor-target"></div>
-  </div>
-</template>
-
-<style>
-
-.article-label {
-  opacity: 0;
-  transition: opacity 1s;
-  will-change: opacity;
-}
-
-.article-label:hover,
-.visualizer-circle:hover+.article-label {
-  opacity: 1;
-}
-
-.edit {
-  transition: fill 1s;
-  /* fill: var(--background-color-progressive); */
-}
-
-.edit:hover {
-  /*fill: var(--background-color-progressive--hover);*/
+<style scoped>
+canvas {
+  display: block;
 }
 </style>
