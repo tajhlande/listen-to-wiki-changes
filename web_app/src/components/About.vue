@@ -43,7 +43,6 @@
     </p>
     <ul>
       <li><a target="_blank" href="https://vuejs.org/">Vue.js</a></li>
-      <li><a target="_blank" href="https://d3js.org">D3</a></li>
       <li><a href="https://github.com/goldfire/howler.js">HowlerJS</a></li>
       <li><a href="https://fastapi.tiangolo.com/">FastAPI</a></li>
     </ul>

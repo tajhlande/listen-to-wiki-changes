@@ -99,6 +99,8 @@ function drawScene() {
       ctx.fill();
     } else if (item.type === 'text') {
       const transformedItem = item.transform(item, age);
+      // console.debug(`Item before transform: ${JSON.stringify(item)}`);
+      // console.debug(`Item after transform: ${JSON.stringify(transformedItem)}`);
       const textFontSize = ARTICLE_TITLE_FONT_SIZE;
       const textFontYAdjust = ARTICLE_TITLE_Y_ADJUST;
       ctx.font = textFontSize + 'px sans-serif';
@@ -112,6 +114,9 @@ function drawScene() {
       // white fill
       ctx.fillStyle = adjustAlpha(transformedItem.fillColor, transformedItem.fillAlpha);
       ctx.fillText(transformedItem.text, transformedItem.x, transformedItem.y + textFontYAdjust);
+
+      // record metrics for hits later
+      item.textMetrics = ctx.measureText(transformedItem.text);
     } else if (item.type === 'rectangle') {
       const transformedItem = item.transform(item, age);
       // console.debug(`Drawing rectangle: color ${transformedItem.fillColor}, alpha ${transformedItem.alpha}, ` +
@@ -163,9 +168,8 @@ function handleRecentChange(change) {
   // play the appropriate sound
   if (change.data.event_type === 'new_user') {
     playRandomSwell();
-    //new_user_action(data, svg)
   } else {
-    // play audio
+    // play audio for the edit
     let pan = 0; // mono by default
     let calcPanFromPitch = false
     if (globalSettings.spatialAudio === SPATIAL_POSITION) {
@@ -208,7 +212,9 @@ function handleRecentChange(change) {
         alpha: age < 100 ? item.alpha * age / 100 :
             age < NEW_USER_FADE_DELAY ? item.alpha :
                 (1 - (age - NEW_USER_FADE_DELAY) / NEW_USER_FADE_TIME) * item.alpha
-      })
+      }),
+      hoverable: false,
+      clickable: false
     });
     drawables.push({
       type: 'text',
@@ -228,12 +234,42 @@ function handleRecentChange(change) {
         fillAlpha: age < 100 ? item.fillAlpha * age / 100 :
             age < NEW_USER_FADE_DELAY ? item.fillAlpha :
                 (1 - (age - NEW_USER_FADE_DELAY) / NEW_USER_FADE_TIME) * item.fillAlpha
-      })
+      }),
+      hoverable: false,
+      clickable: false
     });
   } else {
+    // this is a regular edit event
     //console.debug("adding to drawables with color: " + color);
 
-    drawables.push({
+    let articleTitle = {
+      // article title
+      type: 'text',
+      x, y,
+      z: 50,
+      timestamp,
+      maxAge: TEXT_MAX_AGE,
+      fillColor: TEXT_FILL_COLOR,
+      outlineColor: TEXT_OUTLINE_COLOR,
+      fillAlpha: silent ? SILENT_ALPHA : DEFAULT_ALPHA,
+      outlineAlpha:  silent ? SILENT_ALPHA : DEFAULT_ALPHA,
+      text: change.data.title,
+      url: change.data.title_url,
+      transform: (item, age) => ({
+        ...item,
+        fillAlpha: Math.sqrt((1 - age / item.maxAge) * item.fillAlpha),
+        outlineAlpha: Math.sqrt((1 - age / item.maxAge) * item.outlineAlpha)
+      }),
+      hoverable: false,
+      clickable: true,
+      onClick: null
+    };
+    articleTitle.onClick = () => {
+      console.debug(`Clicked link for ${articleTitle.text} to go to ${articleTitle.url}`)
+      window.open(articleTitle.url, '_blank');
+    }
+
+    let coloredCircle = {
       // colored circle
       type: 'circle',
       x, y,
@@ -246,9 +282,34 @@ function handleRecentChange(change) {
       transform: (item, age) => ({
         ...item,
         alpha: Math.sqrt((1 - age / item.maxAge) * item.alpha),
-      })
-    });
-    drawables.push({
+      }),
+      hovering: false,
+      hoverable: true,
+      clickable: false,
+      onHover: null,
+      onHoverEnd: null,
+      articleTitle: articleTitle,
+      articleTitleTransform: null,
+      articleTitleMaxAge: null
+    };
+    coloredCircle.onHover = () => {
+      console.log(`Hovering over circle with title ${coloredCircle.articleTitle.text}`);
+      coloredCircle.articleTitleTransform = coloredCircle.articleTitle.transform;
+      coloredCircle.articleTitleMaxAge = coloredCircle.articleTitle.maxAge;
+      coloredCircle.articleTitle.transform = (item, age) => ({...articleTitle})
+      coloredCircle.articleTitle.maxAge = coloredCircle.maxAge;
+      if (drawables.indexOf(articleTitle) === -1) {
+        // it aged out of being drawn, so let's put it back
+        drawables.push(articleTitle);
+      }
+    };
+    coloredCircle.onHoverEnd = () => {
+      console.log(`Ending hover over circle with title ${coloredCircle.articleTitle.text}`);
+      coloredCircle.articleTitle.transform = coloredCircle.articleTitleTransform;
+      coloredCircle.articleTitle.maxAge = coloredCircle.articleTitleMaxAge;
+    };
+
+    let outerRing = {
       // outer ring
       type: 'ring',
       x, y,
@@ -263,9 +324,11 @@ function handleRecentChange(change) {
         ...item,
         alpha: easeOutQuad((1 - age / item.maxAge) * item.alpha),
         rOuter: item.rOuter + 20 * easeOutQuad(age / RING_MAX_AGE)
-      })
-    });
-    drawables.push({
+      }),
+      hoverable: false,
+      clickable: false
+    };
+    let flashOverlay = {
       // white circle flash overlay
       type: 'circle',
       x, y,
@@ -278,31 +341,16 @@ function handleRecentChange(change) {
       transform: (item, age) => ({
         ...item,
         alpha: Math.sqrt((1 - age / item.maxAge) * item.alpha),
-      })
-    });
-    drawables.push({
-      // article title
-      type: 'text',
-      x, y,
-      z: 50,
-      timestamp,
-      maxAge: TEXT_MAX_AGE,
-      fillColor: TEXT_FILL_COLOR,
-      outlineColor: TEXT_OUTLINE_COLOR,
-      fillAlpha: silent ? SILENT_ALPHA : DEFAULT_ALPHA,
-      outlineAlpha:  silent ? SILENT_ALPHA : DEFAULT_ALPHA,
-      text: change.data.title,
-      transform: (item, age) => ({
-        ...item,
-        fillAlpha: Math.sqrt((1 - age / item.maxAge) * item.fillAlpha),
-        outlineAlpha: Math.sqrt((1 - age / item.maxAge) * item.outlineAlpha)
-      })
-    });
-
+      }),
+      hoverable: false,
+      clickable: false
+    };
+    drawables.push(coloredCircle);
+    drawables.push(outerRing);
+    drawables.push(flashOverlay);
+    drawables.push(articleTitle);
   }
   rateMeasureQueue.enqueue(timestamp);
-
-
 }
 
 let resizeCanvasFn = null;
@@ -315,6 +363,7 @@ onMounted(() => {
   document.getElementById('area').appendChild(canvas);
   ctx = canvas.getContext('2d');
 
+  // we'll run this once then run it when the window size changes
   function resizeCanvas() {
     const container = canvas.parentElement;
     const rect = container.getBoundingClientRect();
@@ -347,6 +396,64 @@ onMounted(() => {
   watch(recentChange, (change) => {
     if (change) {
       handleRecentChange(change);
+    }
+  });
+
+  // look for mouse movement
+  canvas.addEventListener('mousemove', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    const mouseX = (e.clientX - rect.left) * (canvas.width / rect.width) / dpr;
+    const mouseY = (e.clientY - rect.top) * (canvas.height / rect.height) / dpr;
+
+    for (let i = drawables.length - 1; i >= 0; i--) {
+      const d = drawables[i];
+      // let's only consider objects that want to listen to hover type events
+      if (!d.hoverable) continue;
+      let foundTarget = false;
+      if (d.type === 'circle') {
+        const dx = mouseX - d.x;
+        const dy = mouseY - d.y;
+        if (!foundTarget && dx * dx + dy * dy <= d.r * d.r) {
+          if (!d.hovering) {
+            d.hovering = true;
+            d.onHover();
+          }
+          foundTarget = true;
+        } else if (d.hovering) {
+          d.hovering = false;
+          d.onHoverEnd();
+        }
+      }
+    }
+  });
+
+  // look for mouse clicks
+  canvas.addEventListener('click', (e) => {
+    console.debug('Heard a click, now locating it');
+    const rect = canvas.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    const mouseX = (e.clientX - rect.left) * (canvas.width / rect.width) / dpr;
+    const mouseY = (e.clientY - rect.top) * (canvas.height / rect.height) / dpr;
+
+    for (let i = drawables.length - 1; i >= 0; i--) {
+      const d = drawables[i];
+      // let's only consider objects that want to listen to hover type events
+      if (!d.clickable) continue;
+      let foundTarget = false;
+      if (d.type === 'text') {
+        const tm = d.textMetrics;
+        const lx = d.x - tm.actualBoundingBoxLeft;
+        const rx = d.x + tm.actualBoundingBoxRight
+        const ty = d.y - tm.actualBoundingBoxAscent;
+        const by = d.y + tm.actualBoundingBoxRight;
+        console.debug(`Checking bounds for text '${d.text}' x(${lx}..${rx}), y(${ty}..${by}) against mouse xy(${mouseX}, ${mouseY}`);
+        if (!foundTarget && lx <= mouseX && mouseX <= rx &&
+                            ty <= mouseY && mouseY <= by) {
+          d.onClick();
+          break;
+        }
+      }
     }
   });
 

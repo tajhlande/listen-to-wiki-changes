@@ -41,8 +41,9 @@ To install the requirements:
 
 ### Run the app in dev mode
 
-To run the API in dev mode: 
+To run the API and webapp in dev mode, first build the web app then run the API:
 
+    npm run build
     uv run -- fastapi dev l2wc_api/main.py
 
 or also, if your Python virtual environment is activated:
@@ -51,11 +52,24 @@ or also, if your Python virtual environment is activated:
 
 To run the web app in dev mode: 
 
-    cd web_app
     npm run dev
 
 Then you can browse to [http://localhost:5173/app](http://localhost:5173/app). 
 Hot reloading in both FastAPI and Vue is supported this way.
+
+### Local dev mode for testing with other devices like mobile phones
+
+To run the API in dev mode, listening to all IPs (including the public IPs):
+
+    uv run -- fastapi dev l2wc_api/main.py  --host 0.0.0.0
+
+The API and UI are configured to allow cross-origin requests, so there shouldn't be any need to configure CORS.
+
+To run the web app in dev mode, it's the same command as before:
+
+    npm run dev
+
+The settings in `vite.config.js` are already set up for Vite to listen to all IPs and allow cross-origin requests.
 
 ### Build the app for production
 

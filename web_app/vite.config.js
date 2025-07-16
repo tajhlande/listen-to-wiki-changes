@@ -12,7 +12,8 @@ export default defineConfig({
   },
   base: '/app', // create relative paths when rendering
   server: {
-    // for local viewing and debugging from phone
+    // for local network viewing and debugging from phone
     allowedHosts: true,
+    cors: true,
   }
 })
