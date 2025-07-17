@@ -6,7 +6,7 @@
 
 ## bugs
 * Dark mode on header is broken since mobile responsiveness update
-gi
+
 ## feature matches to original
 * add link to user page in recent changes
 * maybe: change color scheme back to original: Green circles show edits from unregistered contributors, and purple 
@@ -21,14 +21,9 @@ gi
 
 ## enhancements
 * Change "start" and "stop" buttons to boolean state and leave selector checkboxes unchanged
-* give bot edits a different fill pattern
+* A11y: give bot edits a different fill pattern
 * show total counts for wikis, languages, and types on tab labels
 * i18n for UI text
-* render using WebGL for better performance. some options:
-  * [three.js](https://threejs.org/)
-  * [d3fc](https://github.com/d3fc/d3fc) 
-  * [regl](https://regl-project.github.io/regl/)
-  * plain old [canvas](https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D)
 
 ## blocked ideas
 * see if reverts are specifically tagged, so they could get a distinct look

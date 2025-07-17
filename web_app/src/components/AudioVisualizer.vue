@@ -34,7 +34,7 @@ const NEW_USER_FADE_DELAY = 4000;
 const NEW_USER_FADE_TIME = 3000;
 const DEFAULT_ALPHA = 0.8;
 const SILENT_ALPHA = 0.2;
-const ARTICLE_TITLE_FONT_SIZE = 20;
+const ARTICLE_TITLE_FONT_SIZE = 18;
 const ARTICLE_TITLE_Y_ADJUST = 7;
 const MAX_RATE_QUEUE_SIZE = 30;
 const MAX_EVENT_AGE_FOR_RATE = 10 * 1000;
@@ -47,7 +47,8 @@ const drawables = reactive([]);
 
 let canvasWidth = CANVAS_DEFAULT_WIDTH;
 let canvasHeight = CANVAS_DEFAULT_HEIGHT;
-const canvasRatio = canvasWidth/canvasHeight;
+let canvasDpr = window.devicePixelRatio || 1;
+const canvasAspectRatio = canvasWidth/canvasHeight;
 const canvasRef = ref(null);
 let ctx;
 
@@ -77,8 +78,13 @@ function drawScene() {
   // Cleanup old drawables
   drawables.splice(0, drawables.length, ...drawables.filter((item) => currentTime - item.timestamp < item.maxAge));
   // console.debug(drawables.length + " items to draw");
-  drawables.sort(drawRankItems);
+  //drawables.sort(drawRankItems);
 
+  // prune the drawables list
+  //if (drawables.length > 200) drawables.shift();
+
+  // draw the drawables
+  const canvasSizeRatio = canvasWidth / CANVAS_DEFAULT_WIDTH;
   for (const item of drawables) {
     const age = currentTime - item.timestamp;
 
@@ -86,34 +92,36 @@ function drawScene() {
       const transformedItem = item.transform(item, age);
       ctx.beginPath();
       ctx.fillStyle = adjustAlpha(transformedItem.color, transformedItem.alpha);
-      ctx.arc(transformedItem.x, transformedItem.y, transformedItem.r, 0, 2 * Math.PI);
+      ctx.arc(transformedItem.x * canvasSizeRatio, transformedItem.y * canvasSizeRatio, transformedItem.r  * canvasSizeRatio, 0, 2 * Math.PI);
       ctx.fill();
     } else if (item.type === 'ring') {
       const transformedItem = item.transform(item, age);
       ctx.beginPath();
       ctx.fillStyle = adjustAlpha(transformedItem.color, transformedItem.alpha);
-      ctx.arc(transformedItem.x, transformedItem.y, transformedItem.rOuter, 0, 2 * Math.PI);
+      ctx.arc(transformedItem.x * canvasSizeRatio, transformedItem.y * canvasSizeRatio, transformedItem.rOuter * canvasSizeRatio, 0, 2 * Math.PI);
       ctx.closePath();
-      ctx.arc(transformedItem.x, transformedItem.y, transformedItem.rInner, 0, 2 * Math.PI, 1 /* counterclockwise */);
+      ctx.arc(transformedItem.x * canvasSizeRatio, transformedItem.y * canvasSizeRatio, transformedItem.rInner * canvasSizeRatio, 0, 2 * Math.PI, 1 /* counterclockwise */);
       ctx.closePath();
       ctx.fill();
     } else if (item.type === 'text') {
       const transformedItem = item.transform(item, age);
       // console.debug(`Item before transform: ${JSON.stringify(item)}`);
       // console.debug(`Item after transform: ${JSON.stringify(transformedItem)}`);
-      const textFontSize = ARTICLE_TITLE_FONT_SIZE;
+      const textFontSize = Math.floor(ARTICLE_TITLE_FONT_SIZE * canvasSizeRatio);
       const textFontYAdjust = ARTICLE_TITLE_Y_ADJUST;
       ctx.font = textFontSize + 'px sans-serif';
       ctx.textAlign = 'center';
+      ctx.lineJoin = 'round';
+      ctx.miterLimit = 2;
 
       // black outline
-      ctx.lineWidth = 4;
+      ctx.lineWidth = 3 * canvasSizeRatio;
       ctx.strokeStyle = adjustAlpha(transformedItem.outlineColor, transformedItem.outlineAlpha);
-      ctx.strokeText(transformedItem.text, transformedItem.x, transformedItem.y + textFontYAdjust);
+      ctx.strokeText(transformedItem.text, transformedItem.x * canvasSizeRatio, (transformedItem.y + textFontYAdjust) * canvasSizeRatio);
 
       // white fill
       ctx.fillStyle = adjustAlpha(transformedItem.fillColor, transformedItem.fillAlpha);
-      ctx.fillText(transformedItem.text, transformedItem.x, transformedItem.y + textFontYAdjust);
+      ctx.fillText(transformedItem.text, transformedItem.x * canvasSizeRatio, (transformedItem.y + textFontYAdjust) * canvasSizeRatio);
 
       // record metrics for hits later
       item.textMetrics = ctx.measureText(transformedItem.text);
@@ -123,7 +131,7 @@ function drawScene() {
       //     `(x, y): (${transformedItem.x}, ${transformedItem.y}), ` +
       //     `(width, height): (${transformedItem.width}, ${transformedItem.height})`);
       ctx.fillStyle = adjustAlpha(transformedItem.fillColor, transformedItem.alpha);
-      ctx.fillRect(transformedItem.x, transformedItem.y, transformedItem.width, transformedItem.height);
+      ctx.fillRect(transformedItem.x * canvasSizeRatio, transformedItem.y * canvasSizeRatio, transformedItem.width * canvasSizeRatio, transformedItem.height * canvasSizeRatio);
     } else {
       console.warn(`Unrecognized item type ${item.type}. Item: ${JSON.stringify(item)}`);
     }
@@ -131,13 +139,13 @@ function drawScene() {
   }
 
   // Draw EPM display
-  ctx.font = '16px sans-serif';
+  ctx.font = Math.floor(ARTICLE_TITLE_FONT_SIZE * canvasSizeRatio) + 'px sans-serif';
   ctx.textAlign = 'left';
   ctx.strokeStyle = '#000000';
-  ctx.lineWidth = 3;
-  ctx.strokeText(epmDisplay, 10, canvasHeight - 10);
+  ctx.lineWidth = 3 * canvasSizeRatio;
+  ctx.strokeText(epmDisplay, 10 * canvasSizeRatio, canvasHeight - (10  * canvasSizeRatio));
   ctx.fillStyle = '#ffffff';
-  ctx.fillText(epmDisplay, 10, canvasHeight - 10);
+  ctx.fillText(epmDisplay, 10 * canvasSizeRatio, canvasHeight - (10  * canvasSizeRatio));
 }
 
 function loop() {
@@ -152,15 +160,28 @@ function loop() {
   animationFrameId = requestAnimationFrame(loop);
 }
 
-// 0 <= x <= 1
+// easing functions from https://easings.net/
+// inputs and outputs are: 0 <= x <= 1
 function easeOutQuad(x) {
   return 1 - (1 - x) * (1 - x);
 }
 
+function easeOutExpo(x) {
+  return x === 1 ? 1 : 1 - Math.pow(2, -10 * x);
+}
+
+function easeOutSqrt(x) {
+  return Math.sqrt(x);
+}
+
+function easeOutLinear(x) {
+  return x;
+}
+
 function handleRecentChange(change) {
   const timestamp = Date.now();
-  const x = Math.random() * canvasWidth;
-  const y = Math.random() * canvasHeight;
+  const x = Math.random() * CANVAS_DEFAULT_WIDTH;
+  const y = Math.random() * CANVAS_DEFAULT_HEIGHT;
   const [origSize, scaledSize] = calculateSize(change.data);
   // console.debug("Orig size: " + origSize + ", scaledSize: " + scaledSize);
   const color = change.data.event_type === 'new_page' ? NEW_PAGE_COLOR : (change.data.change_in_length > 0 ? GROW_COLOR : SHRINK_COLOR);
@@ -174,7 +195,7 @@ function handleRecentChange(change) {
     let calcPanFromPitch = false
     if (globalSettings.spatialAudio === SPATIAL_POSITION) {
       //console.log("Calculating pan from position");
-      pan = x * 2 / canvasWidth - 1;
+      pan = x * 2 / CANVAS_DEFAULT_WIDTH - 1;
     } else if (globalSettings.spatialAudio === SPATIAL_PITCH) {
       //console.log("Setting flag to calculate pan from pitch");
       calcPanFromPitch = true;
@@ -201,7 +222,7 @@ function handleRecentChange(change) {
       x: 0,
       y: 0,
       z: 100,
-      width: canvasWidth,
+      width: CANVAS_DEFAULT_WIDTH,
       height: 50,
       fillColor: NEW_USER_BOX_COLOR,
       alpha: 1.0,
@@ -218,7 +239,7 @@ function handleRecentChange(change) {
     });
     drawables.push({
       type: 'text',
-      x: canvasWidth / 2,
+      x: CANVAS_DEFAULT_WIDTH / 2,
       y: 25,
       z: 100,
       text: message,
@@ -257,8 +278,8 @@ function handleRecentChange(change) {
       url: change.data.title_url,
       transform: (item, age) => ({
         ...item,
-        fillAlpha: Math.sqrt((1 - age / item.maxAge) * item.fillAlpha),
-        outlineAlpha: Math.sqrt((1 - age / item.maxAge) * item.outlineAlpha)
+        fillAlpha: (age < 1000) ?item.fillAlpha : (1 - easeOutLinear((age - 1000) / (item.maxAge - 1000))) * item.fillAlpha,
+        outlineAlpha: (age < 1000) ?item.fillAlpha : (1 - easeOutLinear((age - 1000) / (item.maxAge - 1000))) * item.outlineAlpha
       }),
       hoverable: false,
       clickable: true,
@@ -281,7 +302,7 @@ function handleRecentChange(change) {
       alpha: silent ? SILENT_ALPHA : DEFAULT_ALPHA,
       transform: (item, age) => ({
         ...item,
-        alpha: Math.sqrt((1 - age / item.maxAge) * item.alpha),
+        alpha: (1 - easeOutSqrt(age / item.maxAge)) * item.alpha,
       }),
       hovering: false,
       hoverable: true,
@@ -307,6 +328,7 @@ function handleRecentChange(change) {
       console.log(`Ending hover over circle with title ${coloredCircle.articleTitle.text}`);
       coloredCircle.articleTitle.transform = coloredCircle.articleTitleTransform;
       coloredCircle.articleTitle.maxAge = coloredCircle.articleTitleMaxAge;
+      coloredCircle.articleTitle.timestamp = Date.now() - 1000; // treat it as new but start fading right away.
     };
 
     let outerRing = {
@@ -322,8 +344,8 @@ function handleRecentChange(change) {
       alpha: silent ? SILENT_ALPHA : 0.5,
       transform: (item, age) => ({
         ...item,
-        alpha: easeOutQuad((1 - age / item.maxAge) * item.alpha),
-        rOuter: item.rOuter + 20 * easeOutQuad(age / RING_MAX_AGE)
+        alpha: (1 - easeOutSqrt(age / item.maxAge)) * item.alpha,
+        rOuter: item.rOuter + 20 * easeOutSqrt(age / RING_MAX_AGE)
       }),
       hoverable: false,
       clickable: false
@@ -337,10 +359,10 @@ function handleRecentChange(change) {
       timestamp,
       maxAge: FLASH_MAX_AGE,
       color: 'white',
-      alpha: 0.5,
+      alpha: 1.0,
       transform: (item, age) => ({
         ...item,
-        alpha: Math.sqrt((1 - age / item.maxAge) * item.alpha),
+        alpha: (1 - easeOutSqrt( age / item.maxAge)) * item.alpha
       }),
       hoverable: false,
       clickable: false
@@ -367,15 +389,21 @@ onMounted(() => {
   function resizeCanvas() {
     const container = canvas.parentElement;
     const rect = container.getBoundingClientRect();
-    const dpr = window.devicePixelRatio || 1;
 
-    // Update width/height globals
-    canvasWidth = rect.width;
-    canvasHeight = canvasWidth / canvasRatio;
+    // sometimes the window resize event gets fired but the canvas container size hasn't actually changed, so we check
+    if (rect.width === canvasWidth) {
+      return;
+    }
 
-    // Resize canvas internal buffer
-    canvas.width = canvasWidth * dpr;
-    canvas.height = canvasHeight * dpr;
+    canvasDpr = window.devicePixelRatio || 1;
+
+    // Update width/height globals. these are CSS pixels
+    canvasWidth = Math.floor(rect.width);
+    canvasHeight = Math.floor(canvasWidth / canvasAspectRatio);
+
+    // Resize canvas internal buffer for high density screens
+    canvas.width = Math.floor(canvasWidth * canvasDpr);
+    canvas.height = Math.floor(canvasHeight * canvasDpr);
 
     // Style it to fill the container
     canvas.style.width = `${canvasWidth}px`;
@@ -383,7 +411,9 @@ onMounted(() => {
 
     // Scale the drawing context
     ctx.setTransform(1, 0, 0, 1, 0, 0); // reset any prior scaling
-    ctx.scale(dpr, dpr);
+    ctx.scale(canvasDpr, canvasDpr);
+
+    console.info(`Resized canvas to: (${canvasWidth}, ${canvasHeight}) * ${canvasDpr} dpr == (${canvas.width}, ${canvas.height})`);
   }
 
   resizeCanvasFn = resizeCanvas;
@@ -402,9 +432,8 @@ onMounted(() => {
   // look for mouse movement
   canvas.addEventListener('mousemove', (e) => {
     const rect = canvas.getBoundingClientRect();
-    const dpr = window.devicePixelRatio || 1;
-    const mouseX = (e.clientX - rect.left) * (canvas.width / rect.width) / dpr;
-    const mouseY = (e.clientY - rect.top) * (canvas.height / rect.height) / dpr;
+    const mouseX = (e.clientX - rect.left) * (canvas.width / rect.width) / canvasDpr;
+    const mouseY = (e.clientY - rect.top) * (canvas.height / rect.height) / canvasDpr;
 
     for (let i = drawables.length - 1; i >= 0; i--) {
       const d = drawables[i];
@@ -432,9 +461,8 @@ onMounted(() => {
   canvas.addEventListener('click', (e) => {
     console.debug('Heard a click, now locating it');
     const rect = canvas.getBoundingClientRect();
-    const dpr = window.devicePixelRatio || 1;
-    const mouseX = (e.clientX - rect.left) * (canvas.width / rect.width) / dpr;
-    const mouseY = (e.clientY - rect.top) * (canvas.height / rect.height) / dpr;
+    const mouseX = (e.clientX - rect.left) * (canvas.width / rect.width) / canvasDpr;
+    const mouseY = (e.clientY - rect.top) * (canvas.height / rect.height) / canvasDpr;
 
     for (let i = drawables.length - 1; i >= 0; i--) {
       const d = drawables[i];
