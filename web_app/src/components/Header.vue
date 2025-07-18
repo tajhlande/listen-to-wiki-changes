@@ -71,7 +71,7 @@ const settingsExpanded = ref(false)
           <input type="radio" :value="SPATIAL_MONO" v-model="globalSettings.spatialAudio" />
           Mono
         </span>
-      </li> 
+      </li>
     </ul>
     <!-- Settings pane -->
     <div v-if="settingsExpanded" class="settings-pane">
@@ -118,7 +118,7 @@ header {
   z-index: 1000;
   width: 100%;
   height: 3rem;
-  background-color: var(--background-color-base);
+  background-color: rgba(255, 255, 255, 1);
   border-style: var(--border-style-base);
   border-width: 0;
   border-bottom-width: var(--border-width-base);
@@ -129,10 +129,6 @@ header {
   padding: 0 2rem;
 }
 
-header.dark {
-  background-color: var(--background-color-base);
-
-}
 
 header h1 {
   font-size: var(--font-size-xx-large);
@@ -199,8 +195,15 @@ header button {
   display: none;
 }
 
+/* shrink the title when the header gets too small for it */
+@media (max-width: 1200px) {
+  header h1  {
+    font-size: var(--font-size-x-large);
+  }
+}
+
 /* Mobile responsive header menu */
-@media (max-width: 1024px) {
+@media (max-width: 1083px) {
   header {
     flex-direction: row;
     align-items: flex-start;
@@ -217,12 +220,6 @@ header button {
   header ul {
     display: flex;
     flex-direction: column;
-  }
-
-  #header-spacer {
-    visibility: none;
-    height: 0;
-    padding-top: 4px;
   }
 
   .hamburger {
@@ -260,7 +257,7 @@ header button {
   #visualization-menu-item {
     display: none;
   }
-  
+
   li#settings-menu-item {
     display: none;
   }
@@ -282,9 +279,23 @@ header button {
     background-color: rgba(255, 255, 255, 0.7); /* 70% opaque white */
   }
 }
+
 @media (prefers-color-scheme: dark) {
   .settings-pane {
     background-color: rgba(65, 65, 65, 0.7); /* 70% opaque dark gray */
   }
+
+  header {
+    background-color: rgba(65, 65, 65, 1.0);
+  }
 }
+
+/* Mobile dark mode */
+@media (prefers-color-scheme: dark) and (max-width: 1024px) {
+  #top-menu {
+    background: rgba(65, 65, 65, 1.0);
+  }
+}
+
+
 </style>

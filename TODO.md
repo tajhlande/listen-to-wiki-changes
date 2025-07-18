@@ -5,7 +5,6 @@
 * check color scheme for color deficiency legibility
 
 ## bugs
-* Dark mode on header is broken since mobile responsiveness update
 
 ## feature matches to original
 * add link to user page in recent changes
