@@ -5,6 +5,7 @@
 * check color scheme for color deficiency legibility
 
 ## bugs
+* (Chrome on Android) Use Worker instead of SharedWorked when SharedWorker is not available
 
 ## feature matches to original
 * add link to user page in recent changes
