@@ -19,7 +19,6 @@
 * cap amount of currently playing sounds
 
 ## enhancements
-* Set a user agent for calls to streaming API
 * Change "start" and "stop" buttons to boolean state and leave selector checkboxes unchanged
 * A11y: give bot edits a different fill pattern
 * show total counts for wikis, languages, and types on tab labels

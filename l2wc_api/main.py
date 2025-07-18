@@ -17,6 +17,7 @@ from httpx_sse import aconnect_sse
 
 WIKI_LIST_URL = "https://wikistats.wmcloud.org/wikimedias_csv.php"
 WIKI_EVENT_STREAM_URL = "https://stream.wikimedia.org/v2/stream/recentchange"
+CLIENT_HEADERS = {'User-Agent': 'listen-to-wiki-changes/0.0 (https://listen-to-wiki-changes.toolforge.org/; ttaylor@wikimedia.org)'}
 EVENT_QUEUE_SIZE = 100
 KNOWN_EVENT_SCHEMA = "/mediawiki/recentchange/1.0.0" # we will watch for this in case it changes
 # The schema is documented at this URL:
@@ -121,7 +122,7 @@ def load_wikis_list():
     Load the wiki metadata list from the wikistats wiki list file.
     """
     logger.info("Loading wikis list...")
-    response = httpx_get(WIKI_LIST_URL)
+    response = httpx_get(WIKI_LIST_URL, headers=CLIENT_HEADERS)
     wiki_list.clear()
     wiki_types.clear()
     wiki_types['special'] = { 'wikiType': 'special' } # because they are indeed special
@@ -388,7 +389,7 @@ async def edit_event_relay_loop():
         logger.info("Starting async streaming client")
         try:
             async with AsyncClient(timeout=None) as streaming_client:
-                async with aconnect_sse(streaming_client, "GET", WIKI_EVENT_STREAM_URL) as event_source:
+                async with aconnect_sse(streaming_client, "GET", WIKI_EVENT_STREAM_URL, headers=CLIENT_HEADERS) as event_source:
                     async for sse_event in event_source.aiter_sse():
                         try:
                             raw_event = json.loads(sse_event.data)
