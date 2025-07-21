@@ -432,8 +432,10 @@ onMounted(() => {
   // look for mouse movement
   canvas.addEventListener('mousemove', (e) => {
     const rect = canvas.getBoundingClientRect();
-    const mouseX = (e.clientX - rect.left) * (canvas.width / rect.width) / canvasDpr;
-    const mouseY = (e.clientY - rect.top) * (canvas.height / rect.height) / canvasDpr;
+    const canvasSizeRatio = canvasWidth / CANVAS_DEFAULT_WIDTH;
+    const mouseX = (e.clientX - rect.left) / canvasSizeRatio;
+    const mouseY = (e.clientY - rect.top) / canvasSizeRatio;
+    // console.debug(`Canvas size: (${canvas.width}, ${canvas.height}) and dpr ${canvasDpr}. Mouse position: (${mouseX}, ${mouseY}) on canvas at (${rect.left}, ${rect.top}) with size (${rect.width}, ${rect.height})`);
 
     for (let i = drawables.length - 1; i >= 0; i--) {
       const d = drawables[i];
@@ -460,9 +462,10 @@ onMounted(() => {
   // look for mouse clicks
   canvas.addEventListener('click', (e) => {
     console.debug('Heard a click, now locating it');
+    const canvasSizeRatio = canvasWidth / CANVAS_DEFAULT_WIDTH;
     const rect = canvas.getBoundingClientRect();
-    const mouseX = (e.clientX - rect.left) * (canvas.width / rect.width) / canvasDpr;
-    const mouseY = (e.clientY - rect.top) * (canvas.height / rect.height) / canvasDpr;
+    const mouseX = (e.clientX - rect.left) / canvasSizeRatio;
+    const mouseY = (e.clientY - rect.top) / canvasSizeRatio;
 
     for (let i = drawables.length - 1; i >= 0; i--) {
       const d = drawables[i];
