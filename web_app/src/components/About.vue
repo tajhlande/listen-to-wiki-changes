@@ -21,6 +21,7 @@
       You can welcome him or her by clicking the banner and adding a note on their talk page.
     </p>
     <p>
+      <img id="listen-logo" src="/images/listen-to-wiki-changes-logo.svg" width="18px" height="18px" style="vertical-align: text-bottom" alt="Logo" />
       <b>Listen to Wiki Changes</b> is a refresh of a project originally built by Hatnote,
       <a target="_blank" href="http://github.com/slaporte">Stephen LaPorte</a> and
       <a href="https://github.com/mahmoud">Mahmoud Hashemi</a>.
@@ -43,9 +44,19 @@
     </p>
     <ul>
       <li><a target="_blank" href="https://vuejs.org/">Vue.js</a></li>
-      <li><a href="https://github.com/goldfire/howler.js">HowlerJS</a></li>
-      <li><a href="https://fastapi.tiangolo.com/">FastAPI</a></li>
+      <li><a target="_blank" href="https://github.com/goldfire/howler.js">HowlerJS</a></li>
+      <li><a target="_blank" href="https://fastapi.tiangolo.com/">FastAPI</a></li>
+      <li><a target="_blank" href="https://doc.wikimedia.org/codex/main/">Codex</a></li>
     </ul>
+    <p>
+      The logo is <a target="_blank" href="https://pictogrammers.com/library/mdi/icon/ear-hearing/">Material Design
+      ear-hearing</a> from Pictogrammers, used under the
+      <a target="_blank" href="https://www.apache.org/licenses/LICENSE-2.0">Apache 2.0 License</a>.<br />
+      Logo colors are drawn from the
+      <a target="_blank" href="https://meta.wikimedia.org/wiki/Logo#/media/File:Wikimedia-logo.svg">Wikimedia
+       Logo</a>, designed by
+      <a target="_blank" href="https://en.wikipedia.org/wiki/User:Neolux">w:User:Neolux</a> and in the public domain.
+    </p>
   </div>
 
 </template>

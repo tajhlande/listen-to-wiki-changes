@@ -28,7 +28,10 @@ const settingsExpanded = ref(false)
 
 <template>
   <header>
-    <h1>Listen To Wiki Changes</h1>
+    <span id="logo-and-title">
+      <img id="listen-logo" src="/images/listen-to-wiki-changes-logo.svg" width="30px" height="30px" alt="Logo"/>
+      <h1>Listen To Wiki Changes</h1>
+    </span>
     <cdx-button class="hamburger" @click="menuOpen = !menuOpen" aria-label="Toggle menu">
       <svg-icon type="mdi" :path="mdiMenu"></svg-icon>
     </cdx-button>
@@ -129,6 +132,11 @@ header {
   padding: 0 2rem;
 }
 
+header #logo-and-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
 
 header h1 {
   font-size: var(--font-size-xx-large);

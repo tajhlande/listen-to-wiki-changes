@@ -32,7 +32,7 @@
     they are too numerous and would be noisy. Maybe
 
 ## developer doc and deployment readiness
-* test on 
+* tested on 
   * macos chrome ✅
   * ios ✅
   * android chrome browser ✅

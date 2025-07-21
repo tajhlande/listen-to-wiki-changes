@@ -1,5 +1,7 @@
 # Listen to Wikipedia
 
+<img src="./web_app/public/images/listen-to-wiki-changes-logo.svg" alt="listen to wiki changes logo" width="300px" height="300px" />
+
 Real-time visualization and sonification of Wikipedia activity.
 
 Try it out at [https://listen-to-wiki-changes.toolforge.org/](https://listen-to-wiki-changes.toolforge.org/)
@@ -14,7 +16,7 @@ Updates were contributed by
 [Thomas Chin](https://gitlab.wikimedia.org/tchin).
 The original app is hosted at [listen.hatnote.com](http://listen.hatnote.com).
 
-That implementation had some security problems with web sockets, wasn't listening for recent
+That implementation has some security problems with web sockets, and isn't listening for recent
 changes from the [Event Platform EventStreams HTTP Service](https://wikitech.wikimedia.org/wiki/Event_Platform/EventStreams_HTTP_Service).
 It also has a limited list of mostly larger Wikipedias to listen to.
 
