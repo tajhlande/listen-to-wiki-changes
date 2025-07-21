@@ -41,20 +41,35 @@ const wikiCodeFilter = shallowReactive(new Set());
 const wikiLangFilter = shallowReactive(new Set());
 const wikiTypeFilter = shallowReactive(new Set());
 const recentChange = ref();
-const worker = new SharedWorker(new URL("./relay_client_shared_worker.js", import.meta.url));
 
-worker.port.onmessage = (e) => {
-  recentChange.value = e;
-};
+// Chrome on Android doesn't support SharedWorker, so we'll fall back to Worker in that case
+let worker;
+let port;
+const workerUrl = new URL('./relay_client_shared_worker.js', import.meta.url);
+
+if (typeof SharedWorker !== 'undefined') {
+  console.info("Creating a new SharedWorker for the relay");
+  worker = new SharedWorker(workerUrl, { type: 'module' });
+  port = worker.port;
+  port.onmessage = (e) => {
+    recentChange.value = e;
+  };
+} else {
+  console.info("Creating a new Worker for the relay");
+  worker = new Worker(workerUrl, { type: 'module' });
+  port = worker;
+  worker.onmessage = (e) => {
+    recentChange.value = e;
+  };
+}
 
 watch([wikiCodeFilter, wikiLangFilter, wikiTypeFilter], () => {
-  worker.port.postMessage({
+  port.postMessage({
     apiUrl: baseUrl + "/api/events",
     wikiCodes: Array.from(toRaw(wikiCodeFilter)),
     wikiLangs: Array.from(toRaw(wikiLangFilter)),
     wikiTypes: Array.from(toRaw(wikiTypeFilter)),
   })
-  // worker.port.postMessage(toRaw(filter));
 });
 
 /**

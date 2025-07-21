@@ -5,7 +5,6 @@
 * check color scheme for color deficiency legibility
 
 ## bugs
-* (Chrome on Android) Use Worker instead of SharedWorked when SharedWorker is not available
 
 ## feature matches to original
 * add link to user page in recent changes
@@ -36,7 +35,7 @@
 * test on 
   * macos chrome ✅
   * ios ✅
-  * android chrome browser ❌
+  * android chrome browser ✅
   * windows edge ❓
 * prod deployment ✅
 * make a logo that can be the fav icon
