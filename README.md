@@ -1,8 +1,8 @@
-# Listen to Wikipedia
+# Listen to Wiki Changes
 
 <img src="./web_app/public/images/listen-to-wiki-changes-logo.svg" alt="listen to wiki changes logo" width="300px" height="300px" />
 
-Real-time visualization and sonification of Wikipedia activity.
+Real-time visualization and sonification of wiki activity.
 
 Try it out at [https://listen-to-wiki-changes.toolforge.org/](https://listen-to-wiki-changes.toolforge.org/)
 
