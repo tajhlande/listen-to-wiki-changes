@@ -1,8 +1,7 @@
 # Tasks To-do
 
 ## core functionality and usability
-* maybe sort the wiki list and languages 
-* check color scheme for color deficiency legibility
+* maybe sort the wiki list and languages
 
 ## bugs
 
@@ -38,4 +37,4 @@
   * android chrome browser ✅
   * windows edge ✅
 * prod deployment ✅
-* make a logo that can be the fav icon
+
