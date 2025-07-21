@@ -37,5 +37,6 @@
   * macos chrome ✅
   * ios ✅
   * android chrome browser ❌
+  * windows edge ❓
 * prod deployment ✅
 * make a logo that can be the fav icon
