@@ -63,6 +63,11 @@ wiki_host_index: dict[str, str] = {} # server name -> wiki code
 
 event_relay_loop_task = None
 
+# Connection state management for conditional connection to event stream
+stream_active = False
+stream_control_event = asyncio.Event()
+DISCONNECT_GRACE_PERIOD = 30  # seconds to wait before disconnecting when no subscribers
+
 
 @asynccontextmanager
 async def fastapi_lifespan(fastapi_app: FastAPI):
@@ -379,29 +384,61 @@ async def filter_pass(refined_event, requested_codes, requested_types, requested
 
 async def edit_event_relay_loop():
     """
-    Background task: connect once to the event stream and queue events to all subscribers
+    Background task: connect to the event stream when there are subscribers,
+    disconnect when no subscribers are present (after grace period).
     :return:
     """
     logger.info("Starting SSE edit event relay loop...")
-    global active_subscribers
+    global active_subscribers, stream_active, stream_control_event
+
     while True:
-        # repeating because the server closes the connection with an incomplete message after a while
+        # Wait for first subscriber before connecting
+        await stream_control_event.wait()
+        stream_control_event.clear()
+
+        if not active_subscribers:
+            # Event was cleared before we processed it, or all subscribers left
+            logger.debug("Stream control event cleared, no subscribers to serve.")
+            continue
+
         logger.info("Starting async streaming client")
+        global stream_active
+        stream_active = True
+
         try:
             async with AsyncClient(timeout=None) as streaming_client:
                 async with aconnect_sse(streaming_client, "GET", WIKI_EVENT_STREAM_URL, headers=CLIENT_HEADERS) as event_source:
-                    async for sse_event in event_source.aiter_sse():
+                    logger.info("Connected to wiki event stream")
+
+                    # Create iterator once before the loop
+                    sse_iterator = event_source.aiter_sse()
+
+                    # Process events while we have subscribers
+                    while active_subscribers:
+                        try:
+                            # Use asyncio.wait_for to allow checking subscriber count periodically
+                            sse_event = await asyncio.wait_for(
+                                sse_iterator.__anext__(),
+                                timeout=5.0
+                            )
+                        except asyncio.TimeoutError:
+                            # Timeout allows us to check subscriber count periodically
+                            continue
+                        except StopAsyncIteration:
+                            logger.warning("Event stream ended unexpectedly")
+                            break
+
                         try:
                             raw_event = json.loads(sse_event.data)
                             # fast-filter events that aren't edits or new pages in namespace 0, or new users
                             re_type = raw_event['type']
                             ns = raw_event['namespace']
-                            if not((re_type == 'edit' and ns is 0) or
-                                   (re_type == 'log' and raw_event['log_type'] == 'newusers') or
-                                   (re_type == 'new' and ns is 0)):
+                            if not ((re_type == 'edit' and ns is 0) or
+                                    (re_type == 'log' and raw_event['log_type'] == 'newusers') or
+                                    (re_type == 'new' and ns is 0)):
                                 continue
                         except:
-                            continue # if the event doesn't have parseable JSON data or a namespace, skip it.
+                            continue  # if the event doesn't have parseable JSON data or a namespace, skip it.
 
                         refined_event = refine_event(raw_event)
                         if refined_event['event_type'] == 'unknown':
@@ -412,15 +449,31 @@ async def edit_event_relay_loop():
                                 queue.put_nowait(refined_event)
                             except Exception:
                                 pass
+
             logger.warning("Async streaming client ended stream")
 
         except asyncio.CancelledError:
             logger.info("Relay loop received and handled cancel signal.")
+            stream_active = False
             raise
         except Exception as e:
             logger.exception(f"Async streaming client crashed: {e}")
         finally:
-            logger.info("Restarting relay loop.")
+            stream_active = False
+            logger.info("Stream disconnected, waiting for subscribers...")
+
+            # Wait for grace period or new subscriber before attempting reconnection
+            if not active_subscribers:
+                try:
+                    await asyncio.wait_for(
+                        stream_control_event.wait(),
+                        timeout=DISCONNECT_GRACE_PERIOD
+                    )
+                    # New subscriber arrived within grace period, clear event and continue
+                    stream_control_event.clear()
+                except asyncio.TimeoutError:
+                    # Grace period expired, stay in waiting state
+                    logger.debug("Grace period expired, staying disconnected")
 
 
 async def filtered_event_generator(codes: list[str], types: list[str], langs: list[str]) -> AsyncGenerator[str, None]:
@@ -430,9 +483,18 @@ async def filtered_event_generator(codes: list[str], types: list[str], langs: li
              given parameters.
     """
     queue = EvictingQueue(maxsize=EVENT_QUEUE_SIZE)
-    global active_subscribers
+    global active_subscribers, stream_control_event
+
+    # Signal relay loop if this is the first subscriber
+    was_empty = len(active_subscribers) == 0
     active_subscribers.add(queue)
-    logger.info(f"New client connected. Total subscribers: {len(active_subscribers)}")
+
+    if was_empty:
+        logger.info("First subscriber connected, signaling relay loop to connect")
+        stream_control_event.set()
+    else:
+        logger.info(f"New client connected. Total subscribers: {len(active_subscribers)}")
+
     language_names = [language_dict[lang_code]['enName'] for lang_code in langs]
     try:
         while True:
@@ -448,7 +510,14 @@ async def filtered_event_generator(codes: list[str], types: list[str], langs: li
                 await asyncio.sleep(0)
     finally:
         active_subscribers.remove(queue)
-        logger.info(f"Client disconnected. Remaining: {len(active_subscribers)}")
+        remaining = len(active_subscribers)
+
+        # Signal relay loop if this was the last subscriber
+        if remaining == 0:
+            logger.info("Last subscriber disconnected, signaling relay loop")
+            stream_control_event.set()
+        else:
+            logger.info(f"Client disconnected. Remaining: {remaining}")
 
 
 @app.get("/api/events/")
@@ -490,11 +559,24 @@ async def run_health_check():
     return await anext(filtered_event_generator([], list(wiki_types.keys()), []))
 
 
+@app.get("/api/stream_status")
+async def get_stream_status():
+    """
+    Get the current status of the wiki event stream connection.
+    :return: JSON object with stream connection status and subscriber count.
+    """
+    global stream_active, active_subscribers
+    return {
+        "stream_connected": stream_active,
+        "active_subscribers": len(active_subscribers),
+    }
+
+
 def main():
     """
     If for some reason someone tries to run this module directly, tell them what to do
     """
-    print("Run in dev with: uv run -- fastapi dev main.py\n" 
+    print("Run in dev with: uv run -- fastapi dev main.py\n"
           "Run in prod with: source .venv/bin/activate; python -m fastapi run main.py\n"
           "Or, alternatively: uvicorn l2wc_api.main:app --host 0.0.0.0 --port 8000"
           )
