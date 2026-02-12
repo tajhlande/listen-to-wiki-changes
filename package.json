@@ -1,7 +1,7 @@
 {
   "name": "listen-to-wiki-changes",
   "private": true,
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Listen to the sound of Wikimedia's recent changes feed.",
   "type": "module",
   "scripts": {
