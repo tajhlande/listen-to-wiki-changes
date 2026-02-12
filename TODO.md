@@ -18,7 +18,6 @@
 * cap amount of currently playing sounds
 
 ## enhancements
-* Implement conditional connection management for WIKI_EVENT_STREAM_URL (only connect when subscribers present)
 * Change "start" and "stop" buttons to boolean state and leave selector checkboxes unchanged
 * A11y: give bot edits a different fill pattern
 * show total counts for wikis, languages, and types on tab labels
