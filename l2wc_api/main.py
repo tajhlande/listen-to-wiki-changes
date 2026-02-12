@@ -12,7 +12,7 @@ from fastapi import FastAPI, Query, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
-from httpx import AsyncClient, get as httpx_get
+from httpx import AsyncClient
 from httpx_sse import aconnect_sse
 
 WIKI_LIST_URL = "https://wikistats.wmcloud.org/wikimedias_csv.php"
@@ -127,7 +127,6 @@ def load_wikis_list():
     Load the wiki metadata list from the wikistats wiki list file.
     """
     logger.info("Loading wikis list...")
-    response = httpx_get(WIKI_LIST_URL, headers=CLIENT_HEADERS)
     wiki_list.clear()
     wiki_types.clear()
     wiki_types['special'] = { 'wikiType': 'special' } # because they are indeed special
@@ -136,40 +135,43 @@ def load_wikis_list():
     language_dict.clear()
     wiki_list_columns.clear()
     wiki_count = 0
-    for line in response.text.splitlines():
-        if line.startswith("rank"):
-            # header row
-            wiki_list_columns.extend(line.split(','))
-        else:
-            # hack to fix HTML encoding in response
-            line = html.unescape(line)
-            wiki_count = wiki_count + 1
-            try:
-                wiki_metadata = dict(zip(wiki_list_columns, line.split(',')))
-                wiki_metadata['lang_code'] = 'multi' # until proven otherwise
 
-                wiki_type = wiki_metadata['type'] if 'type' in wiki_metadata.keys() else None
-                if wiki_type and not wiki_type.isdigit():
-                    # the list will have an entry for every line in the retrieved data, including things we don't index
-                    wiki_list.append(wiki_metadata)
-                    wiki_type = wiki_metadata['type']
-                    prefix = wiki_metadata['prefix']
-                    if wiki_type == 'special':
-                        prefix_split = prefix.split('.')
-                        special_name = "NOT_SPECIAL"
-                        if prefix in SPECIAL_WIKIS.keys():
-                            special_name = SPECIAL_WIKIS[prefix][0]
-                            wiki_metadata['code'] = special_name
-                            wiki_metadata['display_name'] = SPECIAL_WIKIS[prefix][1]
-                            wiki_dict[special_name] = wiki_metadata
-                            wiki_host_index[prefix] = special_name
-                        elif prefix.startswith('www.') and 'wikimedia' in prefix and len(prefix_split) == 3 and prefix_split[0].strip():
-                            # maybe a language code as a TLD CC
-                            special_name = prefix_split[-1] + "_wikimedia"
-                            wiki_metadata['code'] = special_name
-                            wiki_metadata['display_name'] = special_name.capitalize()
-                            wiki_dict[special_name] = wiki_metadata
-                            wiki_host_index[prefix] = special_name
+    # Read from local CSV file instead of web request
+    with open('wikimedias.csv', 'r', encoding='utf-8') as f:
+        for line in f:
+            if line.startswith("rank"):
+                # header row
+                wiki_list_columns.extend(line.split(','))
+            else:
+                # hack to fix HTML encoding in response
+                line = html.unescape(line)
+                wiki_count = wiki_count + 1
+                try:
+                    wiki_metadata = dict(zip(wiki_list_columns, line.split(',')))
+                    wiki_metadata['lang_code'] = 'multi' # until proven otherwise
+
+                    wiki_type = wiki_metadata['type'] if 'type' in wiki_metadata.keys() else None
+                    if wiki_type and not wiki_type.isdigit():
+                        # the list will have an entry for every line in the retrieved data, including things we don't index
+                        wiki_list.append(wiki_metadata)
+                        wiki_type = wiki_metadata['type']
+                        prefix = wiki_metadata['prefix']
+                        if wiki_type == 'special':
+                            prefix_split = prefix.split('.')
+                            special_name = "NOT_SPECIAL"
+                            if prefix in SPECIAL_WIKIS.keys():
+                                special_name = SPECIAL_WIKIS[prefix][0]
+                                wiki_metadata['code'] = special_name
+                                wiki_metadata['display_name'] = SPECIAL_WIKIS[prefix][1]
+                                wiki_dict[special_name] = wiki_metadata
+                                wiki_host_index[prefix] = special_name
+                            elif prefix.startswith('www.') and 'wikimedia' in prefix and len(prefix_split) == 3 and prefix_split[0].strip():
+                                # maybe a language code as a TLD CC
+                                special_name = prefix_split[-1] + "_wikimedia"
+                                wiki_metadata['code'] = special_name
+                                wiki_metadata['display_name'] = special_name.capitalize()
+                                wiki_dict[special_name] = wiki_metadata
+                                wiki_host_index[prefix] = special_name
                         elif prefix.endswith('.org') and 'wikimedia' in prefix and len(prefix_split) == 3 and prefix_split[0].strip():
                             # probably a language code as the host name prefix
                             special_name = prefix_split[0] +  "_wikimedia"
@@ -184,36 +186,36 @@ def load_wikis_list():
                         #logger.warning(f"Not indexing wiki: {wiki_metadata}")
 
 
+                        else:
+                            # record the language short code for non-special wikis if one is present
+                            if prefix:
+                                if prefix in language_dict:
+                                    pass
+                                if prefix in language_dict and language_dict[prefix]['enName'] != wiki_metadata['language']:
+                                    logger.warning(f"Duplicate language code found for code {prefix}: "
+                                                   f"recorded '{language_dict[prefix]['enName']}', skipping '{wiki_metadata['language']}'")
+                                else:
+                                    language_dict[prefix] = {
+                                        'langCode': prefix,
+                                        'enName': wiki_metadata['language'],
+                                        'localName': wiki_metadata['loclang']
+                                    }
+                                wiki_metadata['langCode'] = wiki_metadata['prefix']
+
+                            # index the wiki by wiki_code
+                            if wiki_type not in wiki_types:
+                                logger.debug(f"Adding wiki type {wiki_type} to list of wiki types")
+                            wiki_types[wiki_type] = { 'wikiType': wiki_type }
+                            wiki_code = prefix + "_" + wiki_type
+                            wiki_metadata['code'] = wiki_code
+                            wiki_metadata['display_name'] = wiki_metadata['language'] + " " + wiki_metadata['type'].capitalize()
+                            wiki_dict[wiki_code] = wiki_metadata
+                            wiki_host_index[prefix + "." + wiki_type + ".org"] = wiki_code # a terrible hack but ...
                     else:
-                        # record the language short code for non-special wikis if one is present
-                        if prefix:
-                            if prefix in language_dict:
-                                pass
-                            if prefix in language_dict and language_dict[prefix]['enName'] != wiki_metadata['language']:
-                                logger.warning(f"Duplicate language code found for code {prefix}: "
-                                               f"recorded '{language_dict[prefix]['enName']}', skipping '{wiki_metadata['language']}'")
-                            else:
-                                language_dict[prefix] = {
-                                    'langCode': prefix,
-                                    'enName': wiki_metadata['language'],
-                                    'localName': wiki_metadata['loclang']
-                                }
-                            wiki_metadata['langCode'] = wiki_metadata['prefix']
+                        logger.warning(f"Skipping wiki with missing or invalid type: {wiki_metadata}")
 
-                        # index the wiki by wiki_code
-                        if wiki_type not in wiki_types:
-                            logger.debug(f"Adding wiki type {wiki_type} to list of wiki types")
-                        wiki_types[wiki_type] = { 'wikiType': wiki_type }
-                        wiki_code = prefix + "_" + wiki_type
-                        wiki_metadata['code'] = wiki_code
-                        wiki_metadata['display_name'] = wiki_metadata['language'] + " " + wiki_metadata['type'].capitalize()
-                        wiki_dict[wiki_code] = wiki_metadata
-                        wiki_host_index[prefix + "." + wiki_type + ".org"] = wiki_code # a terrible hack but ...
-                else:
-                    logger.warning(f"Skipping wiki with missing or invalid type: {wiki_metadata}")
-
-            except Exception:
-                logger.exception(f"Error processing line({wiki_count}): {line}")
+                except Exception:
+                    logger.exception(f"Error processing line({wiki_count}): {line}")
 
     # manually add wikidata and test wikidata because they aren't in the remote list for some reason
     wiki_code = 'wikidata'
