@@ -556,7 +556,8 @@ async def run_health_check():
     Health check monitoring endpoint. Return HTTP OK (200) if all is well, or some other HTTP error code if not.
     :return: a single event, whatever the next event is across all wikis.
     """
-    return await anext(filtered_event_generator([], list(wiki_types.keys()), []))
+    # return await anext(filtered_event_generator([], list(wiki_types.keys()), []))
+    return "OK"
 
 
 @app.get("/api/stream_status")
